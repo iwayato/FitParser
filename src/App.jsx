@@ -9,13 +9,16 @@ import {
     Dialog,
     CloseButton,
     Portal,
-    Stat
+    Stat,
+    List,
+    Input
 } from "@chakra-ui/react";
 import { Toaster, toaster } from "./components/ui/toaster"
 import { useEffect, useState } from "react";
 import { HiUpload } from "react-icons/hi";
 import { parseFitFile, getElevationProfile } from "./utils/fitParser";
-import { secondsToHHMM } from "./utils/otherParsers";
+import { secondsToHHMM, formatDate } from "./utils/otherParsers";
+import { MdDriveFileRenameOutline, MdDelete } from "react-icons/md"
 import routeStorage from "./utils/routeStorage";
 import Map from "./components/Map";
 
@@ -23,7 +26,10 @@ const App = () => {
 
     const [routes, setRoutes] = useState([])
     const [stats, setStats] = useState()
+    const [newRouteName, setNewRouteName] = useState('')    
     const [fileUploadLoader, setFileUploadLoader] = useState(false)
+    const [updateRouteNameLoader, setUpdateRouteLoader] = useState(false)
+    const [refresh, setRefresh] = useState(false)
 
     useEffect(() => {
         const getRoutesAndStats = async () => {
@@ -33,7 +39,7 @@ const App = () => {
             setStats(stats)
         }
         getRoutesAndStats()
-    }, [fileUploadLoader])
+    }, [fileUploadLoader, updateRouteNameLoader, refresh])
 
     const handleFitFile = async (files) => {
         setFileUploadLoader(true)
@@ -49,15 +55,60 @@ const App = () => {
                         duration: 10000,
                     })
                 } else {
-                    const id = await routeStorage.saveRoute(data, new Date(data.summary.startTime.toString()).toLocaleString());
+                    const id = await routeStorage.saveRoute(data, file.name);
                 }
             }
         }
         catch (error) {
-            console.log(error);
+            toaster.create({
+                title: "An error occurred",
+                description: error,
+                closable: true,
+                type: 'error',
+                duration: 10000,
+            })
         }
         finally {
             setFileUploadLoader(false)
+        }
+    }
+
+    const handleDeleteRoute = async (routeId) => {
+        setRefresh(true)
+        try {
+            await routeStorage.deleteRoute(routeId)
+        }
+        catch (error) {
+            toaster.create({
+                title: "An error occurred",
+                description: error,
+                closable: true,
+                type: 'error',
+                duration: 10000,
+            })
+        }
+        finally {
+            setRefresh(false)
+        }
+    }
+
+    const handleUpdateRouteName = async (routeId) => {
+        setUpdateRouteLoader(true)
+        try {
+            await routeStorage.updateRouteName(routeId, newRouteName)
+        }
+        catch (error) {
+            toaster.create({
+                title: "An error occurred",
+                description: error,
+                closable: true,
+                type: 'error',
+                duration: 10000,
+            })
+        }
+        finally {
+            setUpdateRouteLoader(false)
+            setNewRouteName('')
         }
     }
 
@@ -113,24 +164,26 @@ const App = () => {
                 <Table.Root size="sm" striped showColumnBorder stickyHeader>
                     <Table.Header>
                         <Table.Row>
-                            <Table.ColumnHeader>Start time</Table.ColumnHeader>
+                            <Table.ColumnHeader>Route name</Table.ColumnHeader>
+                            <Table.ColumnHeader>Date</Table.ColumnHeader>
                             <Table.ColumnHeader>Avg Speed [m/s]</Table.ColumnHeader>
                             <Table.ColumnHeader>Max Speed [m/s]</Table.ColumnHeader>
                             <Table.ColumnHeader>Total calories [kcal]</Table.ColumnHeader>
                             <Table.ColumnHeader>Total Distance [km]</Table.ColumnHeader>
                             <Table.ColumnHeader>Total Moving Time [hh:mm]</Table.ColumnHeader>
                             <Table.ColumnHeader>Total Time [hh:mm]</Table.ColumnHeader>
+                            <Table.ColumnHeader>Actions</Table.ColumnHeader>
                         </Table.Row>
                     </Table.Header>
                     <Table.Body>
                         {
                             routes.map((route, index) => (
-                                <Table.Row key={index}>
+                                <Table.Row key={route.id}>
                                     <Table.Cell>
                                         <Dialog.Root size='cover' >
                                             <Dialog.Trigger asChild>
                                                 <Link colorPalette="teal">
-                                                    {new Date(route.summary.startTime.toString()).toLocaleString()}
+                                                    {route.routeName}
                                                 </Link>
                                             </Dialog.Trigger>
                                             <Portal>
@@ -138,7 +191,7 @@ const App = () => {
                                                     <Dialog.Content>
                                                         <Dialog.Header>
                                                             <Dialog.Title>
-                                                                Route started {new Date(route.summary.startTime.toString()).toLocaleString()}
+                                                                {route.routeName}: {formatDate(new Date(route.summary.startTime.toString()))}
                                                             </Dialog.Title>
                                                         </Dialog.Header>
                                                         <Dialog.Body>
@@ -152,12 +205,80 @@ const App = () => {
                                             </Portal>
                                         </Dialog.Root>
                                     </Table.Cell>
+                                    <Table.Cell>{formatDate(new Date(route.summary.startTime.toString()))}</Table.Cell>
                                     <Table.Cell>{Math.round(route.summary.avgSpeed * 100) / 100}</Table.Cell>
                                     <Table.Cell>{Math.round(route.summary.maxSpeed * 100) / 100}</Table.Cell>
                                     <Table.Cell>{Math.round(route.summary.totalCalories * 100) / 100}</Table.Cell>
                                     <Table.Cell>{Math.round(route.summary.totalDistance * 100) / 100}</Table.Cell>
                                     <Table.Cell>{secondsToHHMM(route.summary.totalMovingTime)}</Table.Cell>
                                     <Table.Cell>{secondsToHHMM(route.summary.totalTime)}</Table.Cell>
+                                    <Table.Cell>
+                                        <HStack gap={2}>
+                                            <Dialog.Root placement={'center'}>
+                                                <Dialog.Trigger asChild>
+                                                    <Button
+                                                        size="xs"
+                                                        variant="subtle"
+                                                        colorPalette={'yellow'}
+                                                    >
+                                                        <MdDriveFileRenameOutline />
+                                                    </Button>
+                                                </Dialog.Trigger>
+                                                <Portal>
+                                                    <Dialog.Positioner>
+                                                        <Dialog.Content>
+                                                            <Dialog.Header>
+                                                                <Dialog.Title>Change route name</Dialog.Title>
+                                                            </Dialog.Header>
+                                                            <Dialog.Body>
+                                                                <List.Root gap={3} p={3}>
+                                                                    <List.Item>
+                                                                        Current route name: <b>{route.routeName}</b>
+                                                                    </List.Item>
+                                                                    <List.Item>
+                                                                        <Input
+                                                                            placeholder="New route name" 
+                                                                            size={'sm'}
+                                                                            value={newRouteName}
+                                                                            onChange={(e) => setNewRouteName(e.target.value)}
+                                                                        />
+                                                                    </List.Item>
+                                                                </List.Root>
+
+                                                            </Dialog.Body>
+                                                            <Dialog.Footer>
+                                                                <Dialog.ActionTrigger asChild>
+                                                                    <Button 
+                                                                        variant="outline"
+                                                                        onClick={() => setNewRouteName('')}
+                                                                    >
+                                                                        Close
+                                                                    </Button>
+                                                                </Dialog.ActionTrigger>
+                                                                <Button 
+                                                                    colorPalette={'green'} 
+                                                                    variant="subtle"
+                                                                    loading={updateRouteNameLoader}
+                                                                    disabled={newRouteName.trim().length === 0}
+                                                                    onClick={() => handleUpdateRouteName(route.id)}
+                                                                >
+                                                                    Update
+                                                                </Button>
+                                                            </Dialog.Footer>
+                                                        </Dialog.Content>
+                                                    </Dialog.Positioner>
+                                                </Portal>
+                                            </Dialog.Root>
+                                            <Button
+                                                size="xs"
+                                                variant="subtle"
+                                                colorPalette={'red'}
+                                                onClick={() => handleDeleteRoute(route.id)}
+                                            >
+                                                <MdDelete />
+                                            </Button>
+                                        </HStack>
+                                    </Table.Cell>
                                 </Table.Row>
                             ))
                         }

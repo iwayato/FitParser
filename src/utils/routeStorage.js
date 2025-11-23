@@ -50,7 +50,7 @@ class RouteStorage {
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction([STORE_NAME], 'readwrite');
             const store = transaction.objectStore(STORE_NAME);
-            const request = store.add(routeData);
+            const request = store.add({ routeName: fileName, ...routeData });
             request.onsuccess = () => resolve(request.result);
             request.onerror = () => reject(request.error);
         });
@@ -67,24 +67,6 @@ class RouteStorage {
             const transaction = this.db.transaction([STORE_NAME], 'readonly');
             const store = transaction.objectStore(STORE_NAME);
             const request = store.getAll();
-
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error);
-        });
-    }
-
-    /**
-     * Get a specific route by ID
-     * @param {number} id - Route ID
-     * @returns {Promise<Object>} Route data
-     */
-    async getRouteById(id) {
-        if (!this.db) await this.init();
-
-        return new Promise((resolve, reject) => {
-            const transaction = this.db.transaction([STORE_NAME], 'readonly');
-            const store = transaction.objectStore(STORE_NAME);
-            const request = store.get(id);
 
             request.onsuccess = () => resolve(request.result);
             request.onerror = () => reject(request.error);
@@ -110,6 +92,24 @@ class RouteStorage {
     }
 
     /**
+     * Get a specific route by ID
+     * @param {number} id - Route ID
+     * @returns {Promise<Object>} Route data
+     */
+    async getRouteById(id) {
+        if (!this.db) await this.init();
+
+        return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction([STORE_NAME], 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.get(id);
+
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    /**
      * Update route name
      * @param {number} id - Route ID
      * @param {string} newName - New route name
@@ -121,7 +121,7 @@ class RouteStorage {
         const route = await this.getRouteById(id);
         if (!route) throw new Error('Route not found');
 
-        route.name = newName;
+        route.routeName = newName;
 
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction([STORE_NAME], 'readwrite');
