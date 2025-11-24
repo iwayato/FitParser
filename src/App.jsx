@@ -11,25 +11,45 @@ import {
     Portal,
     Stat,
     List,
+    InputGroup,
     Input
 } from "@chakra-ui/react";
 import { Toaster, toaster } from "./components/ui/toaster"
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { HiUpload } from "react-icons/hi";
 import { parseFitFile, getElevationProfile } from "./utils/fitParser";
 import { secondsToHHMM, formatDate } from "./utils/otherParsers";
 import { MdDriveFileRenameOutline, MdDelete } from "react-icons/md"
+import { IoSearch } from "react-icons/io5";
 import routeStorage from "./utils/routeStorage";
 import Map from "./components/Map";
 
+const SortIcon = ({ direction }) => {
+    if (direction === 'asc') {
+        return <span style={{ marginLeft: '8px' }}>▲</span>;
+    }
+    if (direction === 'desc') {
+        return <span style={{ marginLeft: '8px' }}>▼</span>;
+    }
+    return <span style={{ marginLeft: '8px', opacity: 0.3 }}>▲</span>;
+};
+
 const App = () => {
 
+    // States
     const [routes, setRoutes] = useState([])
     const [stats, setStats] = useState()
-    const [newRouteName, setNewRouteName] = useState('')    
+    const [newRouteName, setNewRouteName] = useState('')
     const [fileUploadLoader, setFileUploadLoader] = useState(false)
     const [updateRouteNameLoader, setUpdateRouteLoader] = useState(false)
     const [refresh, setRefresh] = useState(false)
+
+    // Filters
+    const inputRef = useRef(null)
+    const [routeNameFilter, setRouteNameFilter] = useState('')
+
+    // Sort
+    const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
 
     useEffect(() => {
         const getRoutesAndStats = async () => {
@@ -40,6 +60,19 @@ const App = () => {
         }
         getRoutesAndStats()
     }, [fileUploadLoader, updateRouteNameLoader, refresh])
+
+    const handleSort = (key) => {
+        let direction = 'asc';
+
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        else if (sortConfig.key === key && sortConfig.direction === 'desc') {
+            direction = null;
+        }
+
+        setSortConfig({ key, direction });
+    };
 
     const handleFitFile = async (files) => {
         setFileUploadLoader(true)
@@ -112,12 +145,31 @@ const App = () => {
         }
     }
 
+    const filteredRoutes = routes
+        .filter((route) => {
+            return (
+                (routeNameFilter.trim() === '' || route.routeName.toLowerCase().includes(routeNameFilter.toLocaleLowerCase()))
+            )
+        })
+        .sort((a, b) => {
+            const aVal = a.summary[sortConfig.key];
+            const bVal = b.summary[sortConfig.key];
+
+            if (aVal < bVal) {
+                return sortConfig.direction === 'asc' ? -1 : 1;
+            }
+            if (aVal > bVal) {
+                return sortConfig.direction === 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
+
     return (
         <VStack p={8} gap={5}>
 
-            <Heading size={'3xl'} mb={5}>My Bike Routes</Heading>
+            <Heading size={'3xl'} mb={2}>My Bike Routes</Heading>
 
-            <HStack gap={5} mb={5}>
+            <HStack gap={5} mb={2}>
                 <Stat.Root w={'200px'} borderWidth="1px" rounded="md" p={3}>
                     <Stat.Label>Total routes</Stat.Label>
                     <Stat.ValueText>{stats?.totalRoutes}</Stat.ValueText>
@@ -143,41 +195,121 @@ const App = () => {
                 </Stat.Root>
             </HStack>
 
-            <FileUpload.Root
-                onFileAccept={(e) => handleFitFile(e.files)}
-                accept={[".fit"]}
-                maxFiles={100}
-            >
-                <FileUpload.HiddenInput />
-                <FileUpload.Trigger asChild>
-                    <Button
-                        loading={fileUploadLoader}
-                        variant="outline"
-                        size="sm"
-                    >
-                        <HiUpload /> Upload route
-                    </Button>
-                </FileUpload.Trigger>
-            </FileUpload.Root>
+            <HStack gap={5} align={'start'} w={'100%'}>
+                <InputGroup
+                    startElement={<IoSearch />}
+                    endElement={routeNameFilter ? (
+                        <CloseButton
+                            size="xs"
+                            onClick={() => {
+                                setRouteNameFilter('')
+                                inputRef.current?.focus()
+                            }}
+                            me="-2"
+                        />
+                    ) : undefined}
+                    w={'230px'}
+                >
+                    <Input
+                        ref={inputRef}
+                        placeholder="Search by route name"
+                        size={'sm'}
+                        value={routeNameFilter}
+                        onChange={(e) => setRouteNameFilter(e.target.value)}
+                    />
+                </InputGroup>
+                <FileUpload.Root
+                    onFileAccept={(e) => handleFitFile(e.files)}
+                    accept={[".fit"]}
+                    maxFiles={100}
+                >
+                    <FileUpload.HiddenInput />
+                    <FileUpload.Trigger asChild>
+                        <Button
+                            loading={fileUploadLoader}
+                            variant="outline"
+                            size="sm"
+                        >
+                            <HiUpload /> Upload route
+                        </Button>
+                    </FileUpload.Trigger>
+                </FileUpload.Root>
+            </HStack>
 
-            <Table.ScrollArea h="calc(100vh - 320px)" w="100%">
+            <Table.ScrollArea h="calc(100vh - 300px)" w="100%">
                 <Table.Root size="sm" striped showColumnBorder stickyHeader>
                     <Table.Header>
                         <Table.Row>
                             <Table.ColumnHeader>Route name</Table.ColumnHeader>
-                            <Table.ColumnHeader>Date</Table.ColumnHeader>
-                            <Table.ColumnHeader>Avg Speed [m/s]</Table.ColumnHeader>
-                            <Table.ColumnHeader>Max Speed [m/s]</Table.ColumnHeader>
-                            <Table.ColumnHeader>Total calories [kcal]</Table.ColumnHeader>
-                            <Table.ColumnHeader>Total Distance [km]</Table.ColumnHeader>
-                            <Table.ColumnHeader>Total Moving Time [hh:mm]</Table.ColumnHeader>
-                            <Table.ColumnHeader>Total Time [hh:mm]</Table.ColumnHeader>
+                            <Table.ColumnHeader
+                                cursor="pointer"
+                                userSelect='none'
+                                _hover={{ bg: 'gray.800' }}
+                                onClick={() => handleSort('startTime')}
+                            >
+                                Date
+                                <SortIcon direction={sortConfig.key === 'startTime' ? sortConfig.direction : null} />
+                            </Table.ColumnHeader>
+                            <Table.ColumnHeader
+                                cursor="pointer"
+                                userSelect='none'
+                                _hover={{ bg: 'gray.800' }}
+                                onClick={() => handleSort('avgSpeed')}
+                            >
+                                Avg Speed [m/s]
+                                <SortIcon direction={sortConfig.key === 'avgSpeed' ? sortConfig.direction : null} />
+                            </Table.ColumnHeader>
+                            <Table.ColumnHeader
+                                cursor="pointer"
+                                userSelect='none'
+                                _hover={{ bg: 'gray.800' }}
+                                onClick={() => handleSort('maxSpeed')}
+                            >
+                                Max Speed [m/s]
+                                <SortIcon direction={sortConfig.key === 'maxSpeed' ? sortConfig.direction : null} />
+                            </Table.ColumnHeader>
+                            <Table.ColumnHeader
+                                cursor="pointer"
+                                userSelect='none'
+                                _hover={{ bg: 'gray.800' }}
+                                onClick={() => handleSort('totalCalories')}
+                            >
+                                Total calories [kcal]
+                                <SortIcon direction={sortConfig.key === 'totalCalories' ? sortConfig.direction : null} />
+                            </Table.ColumnHeader>
+                            <Table.ColumnHeader
+                                cursor="pointer"
+                                userSelect='none'
+                                _hover={{ bg: 'gray.800' }}
+                                onClick={() => handleSort('totalDistance')}
+                            >
+                                Total Distance [km]
+                                <SortIcon direction={sortConfig.key === 'totalDistance' ? sortConfig.direction : null} />
+                            </Table.ColumnHeader>
+                            <Table.ColumnHeader
+                                cursor="pointer"
+                                userSelect='none'
+                                _hover={{ bg: 'gray.800' }}
+                                onClick={() => handleSort('totalMovingTime')}
+                            >
+                                Total Moving Time [hh:mm]
+                                <SortIcon direction={sortConfig.key === 'totalMovingTime' ? sortConfig.direction : null} />
+                            </Table.ColumnHeader>
+                            <Table.ColumnHeader
+                                cursor="pointer"
+                                userSelect='none'
+                                _hover={{ bg: 'gray.800' }}
+                                onClick={() => handleSort('totalTime')}
+                            >
+                                Total Time [hh:mm]
+                                <SortIcon direction={sortConfig.key === 'totalTime' ? sortConfig.direction : null} />
+                            </Table.ColumnHeader>
                             <Table.ColumnHeader>Actions</Table.ColumnHeader>
                         </Table.Row>
                     </Table.Header>
                     <Table.Body>
                         {
-                            routes.map((route, index) => (
+                            filteredRoutes.map((route, index) => (
                                 <Table.Row key={route.id}>
                                     <Table.Cell>
                                         <Dialog.Root size='cover' >
@@ -237,7 +369,7 @@ const App = () => {
                                                                     </List.Item>
                                                                     <List.Item>
                                                                         <Input
-                                                                            placeholder="New route name" 
+                                                                            placeholder="New route name"
                                                                             size={'sm'}
                                                                             value={newRouteName}
                                                                             onChange={(e) => setNewRouteName(e.target.value)}
@@ -248,15 +380,15 @@ const App = () => {
                                                             </Dialog.Body>
                                                             <Dialog.Footer>
                                                                 <Dialog.ActionTrigger asChild>
-                                                                    <Button 
+                                                                    <Button
                                                                         variant="outline"
                                                                         onClick={() => setNewRouteName('')}
                                                                     >
                                                                         Close
                                                                     </Button>
                                                                 </Dialog.ActionTrigger>
-                                                                <Button 
-                                                                    colorPalette={'green'} 
+                                                                <Button
+                                                                    colorPalette={'green'}
                                                                     variant="subtle"
                                                                     loading={updateRouteNameLoader}
                                                                     disabled={newRouteName.trim().length === 0}
