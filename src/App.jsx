@@ -20,6 +20,7 @@ import { HiUpload } from "react-icons/hi";
 import { parseFitFile, getElevationProfile } from "./utils/fitParser";
 import { secondsToHHMM, formatDate } from "./utils/otherParsers";
 import { MdDriveFileRenameOutline, MdDelete } from "react-icons/md"
+import { CiExport, CiImport } from "react-icons/ci";
 import { IoSearch } from "react-icons/io5";
 import routeStorage from "./utils/routeStorage";
 import Map from "./components/Map";
@@ -43,13 +44,15 @@ const App = () => {
     const [fileUploadLoader, setFileUploadLoader] = useState(false)
     const [updateRouteNameLoader, setUpdateRouteLoader] = useState(false)
     const [refresh, setRefresh] = useState(false)
+    const [exportLoader, setExportLoader] = useState(false)
+    const [importLoader, setImportLoader] = useState(false)
 
     // Filters
     const inputRef = useRef(null)
     const [routeNameFilter, setRouteNameFilter] = useState('')
 
     // Sort
-    const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
+    const [sortConfig, setSortConfig] = useState({ key: 'startTime', direction: 'desc' });
 
     useEffect(() => {
         const getRoutesAndStats = async () => {
@@ -59,7 +62,7 @@ const App = () => {
             setStats(stats)
         }
         getRoutesAndStats()
-    }, [fileUploadLoader, updateRouteNameLoader, refresh])
+    }, [fileUploadLoader, updateRouteNameLoader, refresh, importLoader])
 
     const handleSort = (key) => {
         let direction = 'asc';
@@ -68,7 +71,7 @@ const App = () => {
             direction = 'desc';
         }
         else if (sortConfig.key === key && sortConfig.direction === 'desc') {
-            direction = null;
+            direction = 'asc';
         }
 
         setSortConfig({ key, direction });
@@ -142,6 +145,60 @@ const App = () => {
         finally {
             setUpdateRouteLoader(false)
             setNewRouteName('')
+        }
+    }
+
+    const handleExportRoutes = async () => {
+        setExportLoader(true)
+        try {
+            await routeStorage.exportAllRoutes()
+        }
+        catch (error) {
+            toaster.create({
+                title: "An error occurred",
+                description: error,
+                closable: true,
+                type: 'error',
+                duration: 10000,
+            })
+        }
+        finally {
+            setExportLoader(false)
+        }
+    }
+
+    const handleImportRoutes = async (file) => {
+        setImportLoader(true)
+        try {
+            const totalRoutesAdded = await routeStorage.importRoutes(file)
+            if (totalRoutesAdded > 0) {
+                toaster.create({
+                    title: `${totalRoutesAdded} routes have been added`,
+                    closable: true,
+                    type: 'success',
+                    duration: 5000,
+                })
+            }
+            else if (totalRoutesAdded === 0) {
+                toaster.create({
+                    title: "No routes have been added",
+                    closable: true,
+                    type: 'warning',
+                    duration: 5000,
+                })
+            }
+        }
+        catch (error) {
+            toaster.create({
+                title: "An error occurred",
+                description: error,
+                closable: true,
+                type: 'error',
+                duration: 10000,
+            })
+        }
+        finally {
+            setImportLoader(false)
         }
     }
 
@@ -234,6 +291,33 @@ const App = () => {
                         </Button>
                     </FileUpload.Trigger>
                 </FileUpload.Root>
+                <HStack>
+                    <Button
+                        loading={exportLoader}
+                        disabled={routes.length === 0}
+                        variant="outline"
+                        size="sm"
+                        onClick={handleExportRoutes}
+                    >
+                        <CiExport /> Export routes
+                    </Button>
+                    <FileUpload.Root
+                        onFileAccept={(e) => handleImportRoutes(e.files[0])}
+                        accept={[".json"]}
+                        maxFiles={1}
+                    >
+                        <FileUpload.HiddenInput />
+                        <FileUpload.Trigger asChild>
+                            <Button
+                                loading={importLoader}
+                                variant="outline"
+                                size="sm"
+                            >
+                                <CiImport /> Import routes
+                            </Button>
+                        </FileUpload.Trigger>
+                    </FileUpload.Root>
+                </HStack>
             </HStack>
 
             <Table.ScrollArea h="calc(100vh - 300px)" w="100%">

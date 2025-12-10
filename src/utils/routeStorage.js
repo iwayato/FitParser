@@ -198,7 +198,16 @@ class RouteStorage {
      */
     async exportAllRoutes() {
         const routes = await this.getAllRoutes();
-        return JSON.stringify(routes, null, 2);
+        const json =  JSON.stringify(routes, null, 2);
+        const blob = new Blob([json], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+      
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "routes.json";   // filename
+        a.click();
+      
+        URL.revokeObjectURL(url);
     }
 
     /**
@@ -207,13 +216,15 @@ class RouteStorage {
      * @returns {Promise<number>} Number of routes imported
      */
     async importRoutes(jsonData) {
-        const routes = JSON.parse(jsonData);
+        const data = await jsonData.text()
+        const routes = JSON.parse(data);
+        
         let count = 0;
 
         for (const route of routes) {
             // Remove the id so IndexedDB generates new ones
             const { id, ...routeWithoutId } = route;
-            await this.saveRoute(routeWithoutId.data, routeWithoutId.name);
+            await this.saveRoute(routeWithoutId, routeWithoutId.routeName);
             count++;
         }
 
