@@ -132,6 +132,12 @@ const App = () => {
         setUpdateRouteLoader(true)
         try {
             await routeStorage.updateRouteName(routeId, newRouteName)
+            toaster.create({
+                title: "Route name changed successfully",
+                closable: true,
+                type: 'success',
+                duration: 3000,
+            })
         }
         catch (error) {
             toaster.create({
@@ -202,13 +208,11 @@ const App = () => {
         }
     }
 
-    const filteredRoutes = routes
-        .filter((route) => {
+    const filteredRoutes = routes.filter((route) => {
             return (
                 (routeNameFilter.trim() === '' || route.routeName.toLowerCase().includes(routeNameFilter.toLocaleLowerCase()))
             )
-        })
-        .sort((a, b) => {
+        }).sort((a, b) => {
             const aVal = a.summary[sortConfig.key];
             const bVal = b.summary[sortConfig.key];
 
@@ -223,8 +227,6 @@ const App = () => {
 
     return (
         <VStack p={8} gap={5}>
-
-            <Heading size={'3xl'} mb={2}>My Bike Routes</Heading>
 
             <HStack gap={5} mb={2}>
                 <Stat.Root w={'200px'} borderWidth="1px" rounded="md" p={3}>
@@ -265,10 +267,11 @@ const App = () => {
                             me="-2"
                         />
                     ) : undefined}
-                    w={'230px'}
+                    w={'320px'}
                 >
                     <Input
                         ref={inputRef}
+                        disabled={routes.length === 0}
                         placeholder="Search by route name"
                         size={'sm'}
                         value={routeNameFilter}
@@ -320,7 +323,7 @@ const App = () => {
                 </HStack>
             </HStack>
 
-            <Table.ScrollArea h="calc(100vh - 300px)" w="100%">
+            <Table.ScrollArea h="calc(100vh - 230px)" w="100%">
                 <Table.Root size="sm" striped showColumnBorder stickyHeader>
                     <Table.Header>
                         <Table.Row>
@@ -485,14 +488,44 @@ const App = () => {
                                                     </Dialog.Positioner>
                                                 </Portal>
                                             </Dialog.Root>
-                                            <Button
-                                                size="xs"
-                                                variant="subtle"
-                                                colorPalette={'red'}
-                                                onClick={() => handleDeleteRoute(route.id)}
-                                            >
-                                                <MdDelete />
-                                            </Button>
+
+                                            <Dialog.Root placement={'center'}>
+                                                <Dialog.Trigger asChild>
+                                                    <Button
+                                                        size="xs"
+                                                        variant="subtle"
+                                                        colorPalette={'red'}
+                                                    >
+                                                        <MdDelete />
+                                                    </Button>
+                                                </Dialog.Trigger>
+                                                <Portal>
+                                                    <Dialog.Positioner>
+                                                        <Dialog.Content>
+                                                            <Dialog.Header>
+                                                                <Dialog.Title>Are you sure you want to delete this route?</Dialog.Title>
+                                                            </Dialog.Header>
+                                                            <Dialog.Footer>
+                                                                <Dialog.ActionTrigger asChild>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                    >
+                                                                        Close
+                                                                    </Button>
+                                                                </Dialog.ActionTrigger>
+                                                                <Button
+                                                                    colorPalette={'red'}
+                                                                    variant="subtle"
+                                                                    loading={refresh}
+                                                                    onClick={() => handleDeleteRoute(route.id)}
+                                                                >
+                                                                    Delete
+                                                                </Button>
+                                                            </Dialog.Footer>
+                                                        </Dialog.Content>
+                                                    </Dialog.Positioner>
+                                                </Portal>
+                                            </Dialog.Root>
                                         </HStack>
                                     </Table.Cell>
                                 </Table.Row>
