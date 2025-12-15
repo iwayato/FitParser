@@ -113,6 +113,12 @@ const App = () => {
         setRefresh(true)
         try {
             await routeStorage.deleteRoute(routeId)
+            toaster.create({
+                title: "Route deleted successfully",
+                closable: true,
+                type: 'success',
+                duration: 3000,
+            })
         }
         catch (error) {
             toaster.create({
@@ -405,6 +411,7 @@ const App = () => {
                                                     {route.routeName}
                                                 </Link>
                                             </Dialog.Trigger>
+                                            <Dialog.Backdrop />
                                             <Portal>
                                                 <Dialog.Positioner>
                                                     <Dialog.Content>
@@ -443,6 +450,7 @@ const App = () => {
                                                         <MdDriveFileRenameOutline />
                                                     </Button>
                                                 </Dialog.Trigger>
+                                                <Dialog.Backdrop />
                                                 <Portal>
                                                     <Dialog.Positioner>
                                                         <Dialog.Content>
@@ -499,6 +507,7 @@ const App = () => {
                                                         <MdDelete />
                                                     </Button>
                                                 </Dialog.Trigger>
+                                                <Dialog.Backdrop />
                                                 <Portal>
                                                     <Dialog.Positioner>
                                                         <Dialog.Content>
