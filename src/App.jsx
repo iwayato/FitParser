@@ -24,6 +24,7 @@ import { CiExport, CiImport } from "react-icons/ci";
 import { IoSearch } from "react-icons/io5";
 import routeStorage from "./utils/routeStorage";
 import Map from "./components/Map";
+import TimeBasedAnalysisDialog from "./components/TimeBasedAnalysisDialog";
 
 const SortIcon = ({ direction }) => {
     if (direction === 'asc') {
@@ -215,25 +216,26 @@ const App = () => {
     }
 
     const filteredRoutes = routes.filter((route) => {
-            return (
-                (routeNameFilter.trim() === '' || route.routeName.toLowerCase().includes(routeNameFilter.toLocaleLowerCase()))
-            )
-        }).sort((a, b) => {
-            const aVal = a.summary[sortConfig.key];
-            const bVal = b.summary[sortConfig.key];
+        return (
+            (routeNameFilter.trim() === '' || route.routeName.toLowerCase().includes(routeNameFilter.toLocaleLowerCase()))
+        )
+    }).sort((a, b) => {
+        const aVal = a.summary[sortConfig.key];
+        const bVal = b.summary[sortConfig.key];
 
-            if (aVal < bVal) {
-                return sortConfig.direction === 'asc' ? -1 : 1;
-            }
-            if (aVal > bVal) {
-                return sortConfig.direction === 'asc' ? 1 : -1;
-            }
-            return 0;
-        });
+        if (aVal < bVal) {
+            return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aVal > bVal) {
+            return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+    });
 
     return (
         <VStack p={8} gap={5}>
 
+            {/* Stats */}
             <HStack gap={5} mb={2}>
                 <Stat.Root w={'200px'} borderWidth="1px" rounded="md" p={3}>
                     <Stat.Label>Total routes</Stat.Label>
@@ -260,47 +262,53 @@ const App = () => {
                 </Stat.Root>
             </HStack>
 
-            <HStack gap={5} align={'start'} w={'100%'}>
-                <InputGroup
-                    startElement={<IoSearch />}
-                    endElement={routeNameFilter ? (
-                        <CloseButton
-                            size="xs"
-                            onClick={() => {
-                                setRouteNameFilter('')
-                                inputRef.current?.focus()
-                            }}
-                            me="-2"
-                        />
-                    ) : undefined}
-                    w={'320px'}
-                >
-                    <Input
-                        ref={inputRef}
-                        disabled={routes.length === 0}
-                        placeholder="Search by route name"
-                        size={'sm'}
-                        value={routeNameFilter}
-                        onChange={(e) => setRouteNameFilter(e.target.value)}
-                    />
-                </InputGroup>
-                <FileUpload.Root
-                    onFileAccept={(e) => handleFitFile(e.files)}
-                    accept={[".fit"]}
-                    maxFiles={100}
-                >
-                    <FileUpload.HiddenInput />
-                    <FileUpload.Trigger asChild>
-                        <Button
-                            loading={fileUploadLoader}
-                            variant="outline"
-                            size="sm"
-                        >
-                            <HiUpload /> Upload route
-                        </Button>
-                    </FileUpload.Trigger>
-                </FileUpload.Root>
+            {/* Upload, Export, Import buttons */}
+            <HStack gap={5} w={'100%'}>
                 <HStack>
+                    <InputGroup
+                        startElement={<IoSearch />}
+                        endElement={routeNameFilter ? (
+                            <CloseButton
+                                size="xs"
+                                onClick={() => {
+                                    setRouteNameFilter('')
+                                    inputRef.current?.focus()
+                                }}
+                                me="-2"
+                            />
+                        ) : undefined}
+                        w={'220px'}
+                    >
+                        <Input
+                            ref={inputRef}
+                            disabled={routes.length === 0}
+                            placeholder="Search by route name"
+                            size={'sm'}
+                            value={routeNameFilter}
+                            onChange={(e) => setRouteNameFilter(e.target.value)}
+                        />
+                    </InputGroup>
+                    <TimeBasedAnalysisDialog 
+                        disabled={routes.length === 0}
+                    />
+                </HStack>
+                <HStack ml='auto'>
+                    <FileUpload.Root
+                        onFileAccept={(e) => handleFitFile(e.files)}
+                        accept={[".fit"]}
+                        maxFiles={100}
+                    >
+                        <FileUpload.HiddenInput />
+                        <FileUpload.Trigger asChild>
+                            <Button
+                                loading={fileUploadLoader}
+                                variant="outline"
+                                size="sm"
+                            >
+                                <HiUpload /> Upload route
+                            </Button>
+                        </FileUpload.Trigger>
+                    </FileUpload.Root>
                     <Button
                         loading={exportLoader}
                         disabled={routes.length === 0}
@@ -329,6 +337,7 @@ const App = () => {
                 </HStack>
             </HStack>
 
+            {/* Table */}
             <Table.ScrollArea h="calc(100vh - 230px)" w="100%">
                 <Table.Root size="sm" striped showColumnBorder stickyHeader>
                     <Table.Header>

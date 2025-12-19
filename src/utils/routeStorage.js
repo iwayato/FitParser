@@ -156,9 +156,12 @@ class RouteStorage {
      * Get routes sorted by date (newest first)
      * @returns {Promise<Array>}
      */
-    async getRoutesSortedByDate() {
+    async getRoutesByDateRange(start, end) {
         const routes = await this.getAllRoutes();
-        return routes.sort((a, b) => new Date(b.date) - new Date(a.date));
+        return routes.filter((r) => 
+            new Date(r.summary.startTime) >= start && 
+            new Date(r.summary.startTime) <= end
+        );
     }
 
     /**
