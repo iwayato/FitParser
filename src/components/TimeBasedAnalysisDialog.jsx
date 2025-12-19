@@ -13,8 +13,8 @@ import {
     VStack
 } from "@chakra-ui/react";
 import {
-    LineChart,
-    Line,
+    BarChart,
+    Bar,
     XAxis,
     YAxis,
     Tooltip,
@@ -37,6 +37,44 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
     const [rows, setRows] = useState([]);
     const [startDate, setStartDate] = useState(startOfMonth(new Date()));
     const [endDate, setEndDate] = useState(new Date());
+
+    const wrapText = (text, maxCharsPerLine = 10) => {
+        const words = text.split(' ');
+        const lines = [];
+        let currentLine = '';
+
+        words.forEach(word => {
+            if ((currentLine + word).length <= maxCharsPerLine) {
+                currentLine += `${word} `;
+            } else {
+                lines.push(currentLine.trim());
+                currentLine = `${word} `;
+            }
+        });
+
+        if (currentLine) lines.push(currentLine.trim());
+        return lines;
+    };
+
+    const WrappedTick = ({ x, y, payload }) => {
+        const lines = wrapText(payload.value, 12);
+
+        return (
+            <g transform={`translate(${x},${y})`}>
+                <text textAnchor="middle" dy={16}>
+                    {lines.map((line, index) => (
+                        <tspan
+                            key={index}
+                            x={0}
+                            dy={index === 0 ? 0 : 14}
+                        >
+                            {line}
+                        </tspan>
+                    ))}
+                </text>
+            </g>
+        );
+    };
 
     const groupRoutes = (data) => {
         let row = {
@@ -162,7 +200,7 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
                                         <VStack gap={5}>
                                             <Text fontSize='2xl'>Total routes</Text>
                                             <ResponsiveContainer width="100%" height={285}>
-                                                <LineChart data={rows.map(row => {
+                                                <BarChart data={rows.map(row => {
                                                     return {
                                                         date: format(row.startDate, "dd/MM/yyyy") + ' - ' + format(row.endDate, "dd/MM/yyyy"),
                                                         data: row.totalRoutes
@@ -172,11 +210,8 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
                                                     <CartesianGrid strokeDasharray="2 2" />
                                                     <XAxis dataKey="date" />
                                                     <YAxis width="auto" />
-                                                    <Line
-                                                        dataKey="data"
-                                                        strokeWidth={2}
-                                                    />
-                                                </LineChart>
+                                                    <Bar dataKey="data" fill="#8884d8" />
+                                                </BarChart>
                                             </ResponsiveContainer>
                                         </VStack>
                                     </Carousel.Item>
@@ -186,7 +221,7 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
                                         <VStack gap={5}>
                                             <Text fontSize='2xl'>Avg speed [km/h]</Text>
                                             <ResponsiveContainer width="100%" height={285}>
-                                                <LineChart data={rows.map(row => {
+                                                <BarChart data={rows.map(row => {
                                                     return {
                                                         date: format(row.startDate, "dd/MM/yyyy") + ' - ' + format(row.endDate, "dd/MM/yyyy"),
                                                         data: row.avgSpeed
@@ -196,11 +231,8 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
                                                     <CartesianGrid strokeDasharray="2 2" />
                                                     <XAxis dataKey="date" />
                                                     <YAxis width="auto" />
-                                                    <Line
-                                                        dataKey="data"
-                                                        strokeWidth={2}
-                                                    />
-                                                </LineChart>
+                                                    <Bar dataKey="data" fill="#8884d8" />
+                                                </BarChart>
                                             </ResponsiveContainer>
                                         </VStack>
                                     </Carousel.Item>
@@ -210,7 +242,7 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
                                         <VStack gap={5}>
                                             <Text fontSize='2xl'>Avg max speed [km/h]</Text>
                                             <ResponsiveContainer width="100%" height={285}>
-                                                <LineChart data={rows.map(row => {
+                                                <BarChart data={rows.map(row => {
                                                     return {
                                                         date: format(row.startDate, "dd/MM/yyyy") + ' - ' + format(row.endDate, "dd/MM/yyyy"),
                                                         data: row.avgMaxSpeed
@@ -220,11 +252,8 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
                                                     <CartesianGrid strokeDasharray="2 2" />
                                                     <XAxis dataKey="date" />
                                                     <YAxis width="auto" />
-                                                    <Line
-                                                        dataKey="data"
-                                                        strokeWidth={2}
-                                                    />
-                                                </LineChart>
+                                                    <Bar dataKey="data" fill="#8884d8" />
+                                                </BarChart>
                                             </ResponsiveContainer>
                                         </VStack>
                                     </Carousel.Item>
@@ -234,7 +263,7 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
                                         <VStack gap={5}>
                                             <Text fontSize='2xl'>Total calories [kcal]</Text>
                                             <ResponsiveContainer width="100%" height={285}>
-                                                <LineChart data={rows.map(row => {
+                                                <BarChart data={rows.map(row => {
                                                     return {
                                                         date: format(row.startDate, "dd/MM/yyyy") + ' - ' + format(row.endDate, "dd/MM/yyyy"),
                                                         data: row.totalCalories
@@ -244,11 +273,8 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
                                                     <CartesianGrid strokeDasharray="2 2" />
                                                     <XAxis dataKey="date" />
                                                     <YAxis width="auto" />
-                                                    <Line
-                                                        dataKey="data"
-                                                        strokeWidth={2}
-                                                    />
-                                                </LineChart>
+                                                    <Bar dataKey="data" fill="#8884d8" />
+                                                </BarChart>
                                             </ResponsiveContainer>
                                         </VStack>
                                     </Carousel.Item>
@@ -258,7 +284,7 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
                                         <VStack gap={5}>
                                             <Text fontSize='2xl'>Total distance [km]</Text>
                                             <ResponsiveContainer width="100%" height={285}>
-                                                <LineChart data={rows.map(row => {
+                                                <BarChart data={rows.map(row => {
                                                     return {
                                                         date: format(row.startDate, "dd/MM/yyyy") + ' - ' + format(row.endDate, "dd/MM/yyyy"),
                                                         data: row.totalDistance
@@ -268,11 +294,8 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
                                                     <CartesianGrid strokeDasharray="2 2" />
                                                     <XAxis dataKey="date" />
                                                     <YAxis width="auto" />
-                                                    <Line
-                                                        dataKey="data"
-                                                        strokeWidth={2}
-                                                    />
-                                                </LineChart>
+                                                    <Bar dataKey="data" fill="#8884d8" />
+                                                </BarChart>
                                             </ResponsiveContainer>
                                         </VStack>
                                     </Carousel.Item>
@@ -282,7 +305,7 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
                                         <VStack gap={5}>
                                             <Text fontSize='2xl'>Total moving time [hh:mm]</Text>
                                             <ResponsiveContainer width="100%" height={285}>
-                                                <LineChart data={rows.map(row => {
+                                                <BarChart data={rows.map(row => {
                                                     return {
                                                         date: format(row.startDate, "dd/MM/yyyy") + ' - ' + format(row.endDate, "dd/MM/yyyy"),
                                                         data: row.totalMovingTime
@@ -291,12 +314,10 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
                                                 >
                                                     <CartesianGrid strokeDasharray="2 2" />
                                                     <XAxis dataKey="date" />
-                                                    <YAxis width="auto" tickFormatter={secondsToHHMM}/>
-                                                    <Line
-                                                        dataKey="data"
-                                                        strokeWidth={2}
-                                                    />
-                                                </LineChart>
+                                                    <YAxis width="auto" tickFormatter={secondsToHHMM} />
+                                                    <Bar dataKey="data" fill="#8884d8" >
+                                                    </Bar>
+                                                </BarChart>
                                             </ResponsiveContainer>
                                         </VStack>
                                     </Carousel.Item>
