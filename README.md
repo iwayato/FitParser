@@ -8,4 +8,4 @@ Web App to display bike routes from .fit files
 - [x] Add Icon App
 - [x] Format Star Time to dd/mm/yyyy hh:mm:ss AM/PM
 - [ ] Check compatibility for .fit files from another devices
-- [ ] Add a view where you can see the data in a specific time period
+- [x] Add a view where you can see the data in a specific time period
