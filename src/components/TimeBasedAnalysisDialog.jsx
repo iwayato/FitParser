@@ -10,9 +10,12 @@ import {
     Table,
     Carousel,
     IconButton,
-    VStack
+    VStack,
+    Stat
 } from "@chakra-ui/react";
 import {
+    AreaChart,
+    Area,
     BarChart,
     Bar,
     XAxis,
@@ -34,8 +37,9 @@ import "react-datepicker/dist/react-datepicker.css";
 
 const TimeBasedAnalysisDialog = ({ disabled }) => {
 
-    const [rows, setRows] = useState([]);
-    const [startDate, setStartDate] = useState(startOfMonth(new Date()));
+    const [data, setData] = useState([]);
+    const [stats, setStats] = useState();
+    const [startDate, setStartDate] = useState(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
     const [endDate, setEndDate] = useState(new Date());
 
     const wrapText = (text, maxCharsPerLine = 10) => {
@@ -99,12 +103,18 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
     }
 
     useEffect(() => {
-        const getMonthRoutes = async () => {
+        const getRoutesByPeriod = async () => {
             const data = await routeStorage.getRoutesByDateRange(startDate, endDate)
-            setRows([...rows, groupRoutes(data)])
+            setData(data.map(route => route.summary).reverse())
+            setStats({
+                totalRoutes: data.length,
+                totalDistance: data.reduce((sum, r) => sum + (r.summary.totalDistance || 0), 0),
+                totalMovingTime: data.reduce((sum, r) => sum + (r.summary.totalMovingTime || 0), 0),
+                totalCalories: data.reduce((sum, r) => sum + (r.summary.totalCalories || 0), 0)
+            })
         }
         if (startDate !== null && endDate !== null) {
-            getMonthRoutes()
+            getRoutesByPeriod()
         }
     }, [startDate, endDate])
 
@@ -131,130 +141,160 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
                         <Dialog.Body>
 
                             {/* Period Selector */}
-                            <HStack spacing={2} py={5}>
-                                Time period:
-                                <DatePicker
-                                    selectsRange
-                                    preventOpenOnFocus
-                                    autoFocus={false}
-                                    startDate={startDate}
-                                    endDate={endDate}
-                                    onChange={([start, end]) => {
-                                        setStartDate(start)
-                                        setEndDate(end)
-                                    }}
-                                    dateFormat="dd/MM/yyyy"
-                                    maxDate={new Date()}
-                                    customInput={<Input size="sm" w='185px' />}
-                                />
+                            <HStack spacing={2}>
                                 <Button
                                     size="sm"
                                     variant="subtle"
-                                    colorPalette={'yellow'}
-                                    onClick={() => { setRows([]) }}
+                                    colorPalette={'green'}
+                                    onClick={() => {
+                                        setStartDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+                                        setEndDate(new Date())
+                                    }}
                                 >
-                                    Reset
+                                    1W
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="subtle"
+                                    colorPalette={'green'}
+                                    onClick={() => {
+                                        setStartDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
+                                        setEndDate(new Date())
+                                    }}
+                                >
+                                    1M
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="subtle"
+                                    colorPalette={'green'}
+                                    onClick={() => {
+                                        setStartDate(new Date(new Date().getFullYear(), 0, 1))
+                                        setEndDate(new Date())
+                                    }}
+                                >
+                                    YTD
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="subtle"
+                                    colorPalette={'green'}
+                                    onClick={() => {
+                                        setStartDate(new Date(Date.now() - 365 * 24 * 60 * 60 * 1000))
+                                        setEndDate(new Date())
+                                    }}
+                                >
+                                    1Y
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="subtle"
+                                    colorPalette={'green'}
+                                    onClick={() => {
+                                        setStartDate(new Date(0))
+                                        setEndDate(new Date())
+                                    }}
+                                >
+                                    Beginning
                                 </Button>
                             </HStack>
 
-                            {/* Table */}
-                            <Table.ScrollArea h="calc(40vh - 100px)" w="100%">
-                                <Table.Root size="sm" striped showColumnBorder>
-                                    <Table.Header>
-                                        <Table.Row>
-                                            <Table.ColumnHeader>Start date</Table.ColumnHeader>
-                                            <Table.ColumnHeader>End date</Table.ColumnHeader>
-                                            <Table.ColumnHeader>Total routes</Table.ColumnHeader>
-                                            <Table.ColumnHeader>Avg speed [km/h]</Table.ColumnHeader>
-                                            <Table.ColumnHeader>Avg max speed [km/h]</Table.ColumnHeader>
-                                            <Table.ColumnHeader>Total calories [kcal]</Table.ColumnHeader>
-                                            <Table.ColumnHeader>Total distance [km]</Table.ColumnHeader>
-                                            <Table.ColumnHeader>Total moving time [hh:mm]</Table.ColumnHeader>
-                                        </Table.Row>
-                                    </Table.Header>
-                                    <Table.Body>
-                                        {
-                                            rows.map((row, index) => (
-                                                <Table.Row key={index}>
-                                                    <Table.Cell>{formatDate(row.startDate)}</Table.Cell>
-                                                    <Table.Cell>{formatDate(row.endDate)}</Table.Cell>
-                                                    <Table.Cell>{row.totalRoutes}</Table.Cell>
-                                                    <Table.Cell>{Math.round(row.avgSpeed * 100) / 100}</Table.Cell>
-                                                    <Table.Cell>{Math.round(row.avgMaxSpeed * 100) / 100}</Table.Cell>
-                                                    <Table.Cell>{Math.round(row.totalCalories * 100) / 100}</Table.Cell>
-                                                    <Table.Cell>{Math.round(row.totalDistance * 100) / 100}</Table.Cell>
-                                                    <Table.Cell>{secondsToHHMM(row.totalMovingTime)}</Table.Cell>
-                                                </Table.Row>
-                                            ))
-                                        }
-                                    </Table.Body>
-                                </Table.Root>
-                            </Table.ScrollArea>
+                            {/* Stats */}
+                            <HStack gap={5} mt={6}>
+                                <Stat.Root w={'200px'} borderWidth="1px" rounded="md" p={3}>
+                                    <Stat.Label>Total routes</Stat.Label>
+                                    <Stat.ValueText>{stats?.totalRoutes}</Stat.ValueText>
+                                </Stat.Root>
+                                <Stat.Root w={'200px'} borderWidth="1px" rounded="md" p={3}>
+                                    <Stat.Label>Total distance</Stat.Label>
+                                    <Stat.ValueText alignItems="baseline">
+                                        {Math.round(stats?.totalDistance * 100) / 100} <Stat.ValueUnit>km</Stat.ValueUnit>
+                                    </Stat.ValueText>
+                                </Stat.Root>
+                                <Stat.Root w={'200px'} borderWidth="1px" rounded="md" p={3}>
+                                    <Stat.Label>Total moving time</Stat.Label>
+                                    <Stat.ValueText alignItems="baseline">
+                                        {secondsToHHMM(stats?.totalMovingTime).split(':')[0]}<Stat.ValueUnit>hr</Stat.ValueUnit>
+                                        {secondsToHHMM(stats?.totalMovingTime).split(':')[1]}<Stat.ValueUnit>min</Stat.ValueUnit>
+                                    </Stat.ValueText>
+                                </Stat.Root>
+                                <Stat.Root w={'200px'} borderWidth="1px" rounded="md" p={3}>
+                                    <Stat.Label>Total calories</Stat.Label>
+                                    <Stat.ValueText alignItems="baseline">
+                                        {stats?.totalCalories}<Stat.ValueUnit>kcal</Stat.ValueUnit>
+                                    </Stat.ValueText>
+                                </Stat.Root>
+                            </HStack>
 
                             {/* Charts */}
-                            <Carousel.Root slideCount={6} width="100%" px='20px' mt='50px'>
+                            <Carousel.Root slideCount={5} mt='30px'>
                                 <Carousel.ItemGroup>
-
-                                    {/* Total routes */}
-                                    <Carousel.Item key={1} index={1}>
-                                        <VStack gap={5}>
-                                            <Text fontSize='2xl'>Total routes</Text>
-                                            <ResponsiveContainer width="100%" height={285}>
-                                                <BarChart data={rows.map(row => {
-                                                    return {
-                                                        date: format(row.startDate, "dd/MM/yyyy") + ' - ' + format(row.endDate, "dd/MM/yyyy"),
-                                                        data: row.totalRoutes
-                                                    }
-                                                })}
-                                                >
-                                                    <CartesianGrid strokeDasharray="2 2" />
-                                                    <XAxis dataKey="date" />
-                                                    <YAxis width="auto" />
-                                                    <Bar dataKey="data" fill="#8884d8" />
-                                                </BarChart>
-                                            </ResponsiveContainer>
-                                        </VStack>
-                                    </Carousel.Item>
 
                                     {/* Avg Speed */}
                                     <Carousel.Item key={2} index={2}>
                                         <VStack gap={5}>
                                             <Text fontSize='2xl'>Avg speed [km/h]</Text>
-                                            <ResponsiveContainer width="100%" height={285}>
-                                                <BarChart data={rows.map(row => {
-                                                    return {
-                                                        date: format(row.startDate, "dd/MM/yyyy") + ' - ' + format(row.endDate, "dd/MM/yyyy"),
-                                                        data: row.avgSpeed
-                                                    }
-                                                })}
-                                                >
-                                                    <CartesianGrid strokeDasharray="2 2" />
-                                                    <XAxis dataKey="date" />
-                                                    <YAxis width="auto" />
-                                                    <Bar dataKey="data" fill="#8884d8" />
-                                                </BarChart>
-                                            </ResponsiveContainer>
+                                            <div style={{ width: '100%', height: 'calc(100vh - 400px)', minHeight: '100px', minWidth: '100px'}}>
+                                                <ResponsiveContainer>
+                                                    <AreaChart
+                                                        data={data.map(row => {
+                                                            return {
+                                                                date: format(new Date(row.startTime).toString(), "dd/MM/yyyy"),
+                                                                avgSpeed: row.avgSpeed
+                                                            }
+                                                        })}
+                                                    >
+                                                        <CartesianGrid strokeDasharray="3 3" />
+                                                        <XAxis dataKey="date" />
+                                                        <YAxis />
+                                                        <Tooltip
+                                                            labelStyle={{ color: "black" }}
+                                                            formatter={(value, name, props) => {
+                                                                return [`${Math.round(value * 100) / 100}`, "Avg speed"];
+                                                            }}
+                                                        />
+                                                        <Area
+                                                            type="monotone"
+                                                            dataKey="avgSpeed"
+                                                            activeDot={{ r: 8 }}
+                                                        />
+                                                    </AreaChart>
+                                                </ResponsiveContainer>
+                                            </div>
                                         </VStack>
                                     </Carousel.Item>
 
-                                    {/* Avg Max Speed */}
+                                    {/* Max Speed */}
                                     <Carousel.Item key={3} index={3}>
                                         <VStack gap={5}>
-                                            <Text fontSize='2xl'>Avg max speed [km/h]</Text>
-                                            <ResponsiveContainer width="100%" height={285}>
-                                                <BarChart data={rows.map(row => {
-                                                    return {
-                                                        date: format(row.startDate, "dd/MM/yyyy") + ' - ' + format(row.endDate, "dd/MM/yyyy"),
-                                                        data: row.avgMaxSpeed
-                                                    }
-                                                })}
-                                                >
-                                                    <CartesianGrid strokeDasharray="2 2" />
-                                                    <XAxis dataKey="date" />
-                                                    <YAxis width="auto" />
-                                                    <Bar dataKey="data" fill="#8884d8" />
-                                                </BarChart>
-                                            </ResponsiveContainer>
+                                            <Text fontSize='2xl'>Max speed [km/h]</Text>
+                                            <div style={{ width: '100%', height: 'calc(100vh - 400px)', minHeight: '100px', minWidth: '100px'}}>
+                                                <ResponsiveContainer>
+                                                    <AreaChart
+                                                        data={data.map(row => {
+                                                            return {
+                                                                date: format(new Date(row.startTime).toString(), "dd/MM/yyyy"),
+                                                                maxSpeed: row.maxSpeed
+                                                            }
+                                                        })}
+                                                    >
+                                                        <CartesianGrid strokeDasharray="3 3" />
+                                                        <XAxis dataKey="date" />
+                                                        <YAxis />
+                                                        <Tooltip
+                                                            labelStyle={{ color: "black" }}
+                                                            formatter={(value, name, props) => {
+                                                                return [`${Math.round(value * 100) / 100}`, "Max speed"];
+                                                            }}
+                                                        />
+                                                        <Area
+                                                            type="monotone"
+                                                            dataKey="maxSpeed"
+                                                            activeDot={{ r: 8 }}
+                                                        />
+                                                    </AreaChart>
+                                                </ResponsiveContainer>
+                                            </div>
                                         </VStack>
                                     </Carousel.Item>
 
@@ -262,20 +302,33 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
                                     <Carousel.Item key={4} index={4}>
                                         <VStack gap={5}>
                                             <Text fontSize='2xl'>Total calories [kcal]</Text>
-                                            <ResponsiveContainer width="100%" height={285}>
-                                                <BarChart data={rows.map(row => {
-                                                    return {
-                                                        date: format(row.startDate, "dd/MM/yyyy") + ' - ' + format(row.endDate, "dd/MM/yyyy"),
-                                                        data: row.totalCalories
-                                                    }
-                                                })}
-                                                >
-                                                    <CartesianGrid strokeDasharray="2 2" />
-                                                    <XAxis dataKey="date" />
-                                                    <YAxis width="auto" />
-                                                    <Bar dataKey="data" fill="#8884d8" />
-                                                </BarChart>
-                                            </ResponsiveContainer>
+                                            <div style={{ width: '100%', height: 'calc(100vh - 400px)', minHeight: '100px', minWidth: '100px'}}>
+                                                <ResponsiveContainer>
+                                                    <AreaChart
+                                                        data={data.map(row => {
+                                                            return {
+                                                                date: format(new Date(row.startTime).toString(), "dd/MM/yyyy"),
+                                                                totalCalories: row.totalCalories
+                                                            }
+                                                        })}
+                                                    >
+                                                        <CartesianGrid strokeDasharray="3 3" />
+                                                        <XAxis dataKey="date" />
+                                                        <YAxis />
+                                                        <Tooltip
+                                                            labelStyle={{ color: "black" }}
+                                                            formatter={(value, name, props) => {
+                                                                return [`${Math.round(value * 100) / 100}`, "Total calories"];
+                                                            }}
+                                                        />
+                                                        <Area
+                                                            type="monotone"
+                                                            dataKey="totalCalories"
+                                                            activeDot={{ r: 8 }}
+                                                        />
+                                                    </AreaChart>
+                                                </ResponsiveContainer>
+                                            </div>
                                         </VStack>
                                     </Carousel.Item>
 
@@ -283,20 +336,33 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
                                     <Carousel.Item key={5} index={5}>
                                         <VStack gap={5}>
                                             <Text fontSize='2xl'>Total distance [km]</Text>
-                                            <ResponsiveContainer width="100%" height={285}>
-                                                <BarChart data={rows.map(row => {
-                                                    return {
-                                                        date: format(row.startDate, "dd/MM/yyyy") + ' - ' + format(row.endDate, "dd/MM/yyyy"),
-                                                        data: row.totalDistance
-                                                    }
-                                                })}
-                                                >
-                                                    <CartesianGrid strokeDasharray="2 2" />
-                                                    <XAxis dataKey="date" />
-                                                    <YAxis width="auto" />
-                                                    <Bar dataKey="data" fill="#8884d8" />
-                                                </BarChart>
-                                            </ResponsiveContainer>
+                                            <div style={{ width: '100%', height: 'calc(100vh - 400px)', minHeight: '100px', minWidth: '100px'}}>
+                                                <ResponsiveContainer>
+                                                    <AreaChart
+                                                        data={data.map(row => {
+                                                            return {
+                                                                date: format(new Date(row.startTime).toString(), "dd/MM/yyyy"),
+                                                                totalDistance: row.totalDistance
+                                                            }
+                                                        })}
+                                                    >
+                                                        <CartesianGrid strokeDasharray="3 3" />
+                                                        <XAxis dataKey="date" />
+                                                        <YAxis />
+                                                        <Tooltip
+                                                            labelStyle={{ color: "black" }}
+                                                            formatter={(value, name, props) => {
+                                                                return [`${Math.round(value * 100) / 100}`, "Total distance"];
+                                                            }}
+                                                        />
+                                                        <Area
+                                                            type="monotone"
+                                                            dataKey="totalDistance"
+                                                            activeDot={{ r: 8 }}
+                                                        />
+                                                    </AreaChart>
+                                                </ResponsiveContainer>
+                                            </div>
                                         </VStack>
                                     </Carousel.Item>
 
@@ -304,25 +370,38 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
                                     <Carousel.Item key={6} index={6}>
                                         <VStack gap={5}>
                                             <Text fontSize='2xl'>Total moving time [hh:mm]</Text>
-                                            <ResponsiveContainer width="100%" height={285}>
-                                                <BarChart data={rows.map(row => {
-                                                    return {
-                                                        date: format(row.startDate, "dd/MM/yyyy") + ' - ' + format(row.endDate, "dd/MM/yyyy"),
-                                                        data: row.totalMovingTime
-                                                    }
-                                                })}
-                                                >
-                                                    <CartesianGrid strokeDasharray="2 2" />
-                                                    <XAxis dataKey="date" />
-                                                    <YAxis width="auto" tickFormatter={secondsToHHMM} />
-                                                    <Bar dataKey="data" fill="#8884d8" >
-                                                    </Bar>
-                                                </BarChart>
-                                            </ResponsiveContainer>
+                                            <div style={{ width: '100%', height: 'calc(100vh - 400px)', minHeight: '100px', minWidth: '100px'}}>
+                                                <ResponsiveContainer>
+                                                    <AreaChart
+                                                        data={data.map(row => {
+                                                            return {
+                                                                date: format(new Date(row.startTime).toString(), "dd/MM/yyyy"),
+                                                                totalMovingTime: row.totalMovingTime
+                                                            }
+                                                        })}
+                                                    >
+                                                        <CartesianGrid strokeDasharray="3 3" />
+                                                        <XAxis dataKey="date" />
+                                                        <YAxis />
+                                                        <Tooltip
+                                                            labelStyle={{ color: "black" }}
+                                                            formatter={(value, name, props) => {
+                                                                return [`${secondsToHHMM(value)}`, "Total moving time"];
+                                                            }}
+                                                        />
+                                                        <Area
+                                                            type="monotone"
+                                                            dataKey="totalMovingTime"
+                                                            activeDot={{ r: 8 }}
+                                                        />
+                                                    </AreaChart>
+                                                </ResponsiveContainer>
+                                            </div>
                                         </VStack>
                                     </Carousel.Item>
 
                                 </Carousel.ItemGroup>
+
                                 <Carousel.Control justifyContent="center" gap="4">
                                     <Carousel.PrevTrigger asChild>
                                         <IconButton size="xs" variant="ghost">
@@ -337,6 +416,7 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
                                     </Carousel.NextTrigger>
                                 </Carousel.Control>
                             </Carousel.Root>
+
                         </Dialog.Body>
                         <Dialog.CloseTrigger asChild>
                             <CloseButton size="lg" />
