@@ -42,70 +42,21 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
     const [startDate, setStartDate] = useState(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
     const [endDate, setEndDate] = useState(new Date());
 
-    const wrapText = (text, maxCharsPerLine = 10) => {
-        const words = text.split(' ');
-        const lines = [];
-        let currentLine = '';
-
-        words.forEach(word => {
-            if ((currentLine + word).length <= maxCharsPerLine) {
-                currentLine += `${word} `;
-            } else {
-                lines.push(currentLine.trim());
-                currentLine = `${word} `;
-            }
-        });
-
-        if (currentLine) lines.push(currentLine.trim());
-        return lines;
-    };
-
-    const WrappedTick = ({ x, y, payload }) => {
-        const lines = wrapText(payload.value, 12);
-
-        return (
-            <g transform={`translate(${x},${y})`}>
-                <text textAnchor="middle" dy={16}>
-                    {lines.map((line, index) => (
-                        <tspan
-                            key={index}
-                            x={0}
-                            dy={index === 0 ? 0 : 14}
-                        >
-                            {line}
-                        </tspan>
-                    ))}
-                </text>
-            </g>
-        );
-    };
-
-    const groupRoutes = (data) => {
-        let row = {
-            startDate: startDate,
-            endDate: endDate,
-            totalRoutes: 0,
-            avgSpeed: 0,
-            avgMaxSpeed: 0,
-            totalCalories: 0,
-            totalDistance: 0,
-            totalMovingTime: 0
-        }
-        data.forEach(route => {
-            row.totalRoutes += 1
-            row.avgSpeed += route.summary.avgSpeed / data.length
-            row.avgMaxSpeed += route.summary.maxSpeed / data.length
-            row.totalCalories += route.summary.totalCalories
-            row.totalDistance += route.summary.totalDistance
-            row.totalMovingTime += route.summary.totalMovingTime
-        })
-        return row;
-    }
-
     useEffect(() => {
         const getRoutesByPeriod = async () => {
             const data = await routeStorage.getRoutesByDateRange(startDate, endDate)
-            setData(data.map(route => route.summary).reverse())
+            setData(data.map(route => route.summary).sort((a, b) => {
+                const aVal = a.startTime;
+                const bVal = b.startTime;
+
+                if (aVal < bVal) {
+                    return -1;
+                }
+                if (aVal > bVal) {
+                    return 1;
+                }
+                return 0;
+            }))
             setStats({
                 totalRoutes: data.length,
                 totalDistance: data.reduce((sum, r) => sum + (r.summary.totalDistance || 0), 0),
@@ -151,7 +102,7 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
                                         setEndDate(new Date())
                                     }}
                                 >
-                                    1W
+                                    Last week
                                 </Button>
                                 <Button
                                     size="sm"
@@ -162,7 +113,7 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
                                         setEndDate(new Date())
                                     }}
                                 >
-                                    1M
+                                    Last month
                                 </Button>
                                 <Button
                                     size="sm"
@@ -173,7 +124,7 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
                                         setEndDate(new Date())
                                     }}
                                 >
-                                    YTD
+                                    Year to date
                                 </Button>
                                 <Button
                                     size="sm"
@@ -184,7 +135,7 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
                                         setEndDate(new Date())
                                     }}
                                 >
-                                    1Y
+                                    Last year
                                 </Button>
                                 <Button
                                     size="sm"
