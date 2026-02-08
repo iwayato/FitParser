@@ -333,7 +333,7 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
                                                     >
                                                         <CartesianGrid strokeDasharray="3 3" />
                                                         <XAxis dataKey="date" />
-                                                        <YAxis />
+                                                        <YAxis tickFormatter={(value) => secondsToHHMM(value)}/>
                                                         <Tooltip
                                                             labelStyle={{ color: "black" }}
                                                             formatter={(value, name, props) => {
