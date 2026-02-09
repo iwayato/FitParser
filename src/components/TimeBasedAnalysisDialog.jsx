@@ -35,7 +35,7 @@ import { secondsToHHMM } from "../utils/otherParsers";
 import routeStorage from "../utils/routeStorage";
 import "react-datepicker/dist/react-datepicker.css";
 
-const TimeBasedAnalysisDialog = ({ disabled }) => {
+const TimeBasedAnalysisDialog = ({ disabled, fileUploadLoader, importLoader }) => {
 
     const [data, setData] = useState([]);
     const [stats, setStats] = useState();
@@ -67,7 +67,7 @@ const TimeBasedAnalysisDialog = ({ disabled }) => {
         if (startDate !== null && endDate !== null) {
             getRoutesByPeriod()
         }
-    }, [startDate, endDate])
+    }, [startDate, endDate, fileUploadLoader, importLoader])
 
     return (
         <Dialog.Root size='full' >

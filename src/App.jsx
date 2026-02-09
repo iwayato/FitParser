@@ -290,6 +290,8 @@ const App = () => {
                     </InputGroup>
                     <TimeBasedAnalysisDialog 
                         disabled={routes.length === 0}
+                        fileUploadLoader={fileUploadLoader}
+                        importLoader={importLoader}
                     />
                 </HStack>
                 <HStack ml='auto'>
