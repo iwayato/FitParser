@@ -25,6 +25,7 @@ import { IoSearch } from "react-icons/io5";
 import routeStorage from "./utils/routeStorage";
 import Map from "./components/Map";
 import TimeBasedAnalysisDialog from "./components/TimeBasedAnalysisDialog";
+import CalendarDialog from "./components/CalendarDialog";
 
 const SortIcon = ({ direction }) => {
     if (direction === 'asc') {
@@ -288,7 +289,12 @@ const App = () => {
                             onChange={(e) => setRouteNameFilter(e.target.value)}
                         />
                     </InputGroup>
-                    <TimeBasedAnalysisDialog 
+                    <TimeBasedAnalysisDialog
+                        disabled={routes.length === 0}
+                        fileUploadLoader={fileUploadLoader}
+                        importLoader={importLoader}
+                    />
+                    <CalendarDialog
                         disabled={routes.length === 0}
                         fileUploadLoader={fileUploadLoader}
                         importLoader={importLoader}
