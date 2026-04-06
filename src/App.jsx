@@ -366,7 +366,7 @@ const App = () => {
                                 _hover={{ bg: 'gray.800' }}
                                 onClick={() => handleSort('avgSpeed')}
                             >
-                                Avg Speed [m/s]
+                                Avg Speed [km/h]
                                 <SortIcon direction={sortConfig.key === 'avgSpeed' ? sortConfig.direction : null} />
                             </Table.ColumnHeader>
                             <Table.ColumnHeader
@@ -375,7 +375,7 @@ const App = () => {
                                 _hover={{ bg: 'gray.800' }}
                                 onClick={() => handleSort('maxSpeed')}
                             >
-                                Max Speed [m/s]
+                                Max Speed [km/h]
                                 <SortIcon direction={sortConfig.key === 'maxSpeed' ? sortConfig.direction : null} />
                             </Table.ColumnHeader>
                             <Table.ColumnHeader
