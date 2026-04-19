@@ -9,6 +9,7 @@ import {
     VStack,
     IconButton,
     Grid,
+    Stat,
 } from "@chakra-ui/react";
 import { useState, useEffect } from "react";
 import { LuChevronLeft, LuChevronRight } from "react-icons/lu";
@@ -56,6 +57,17 @@ const CalendarDialog = ({ disabled, fileUploadLoader, importLoader }) => {
 
     const isNextDisabled = isSameMonth(currentMonth, today);
 
+    const monthRoutes = routes.filter(r => isSameMonth(new Date(r.summary.startTime), currentMonth));
+    const monthStats = monthRoutes.reduce(
+        (acc, r) => ({
+            activities: acc.activities + 1,
+            distance: acc.distance + (r.summary.totalDistance ?? 0),
+            movingTime: acc.movingTime + (r.summary.totalMovingTime ?? 0),
+            calories: acc.calories + (r.summary.totalCalories ?? 0),
+        }),
+        { activities: 0, distance: 0, movingTime: 0, calories: 0 }
+    );
+
     return (
         <Dialog.Root size="full">
             <Dialog.Trigger asChild>
@@ -94,6 +106,37 @@ const CalendarDialog = ({ disabled, fileUploadLoader, importLoader }) => {
                                     <LuChevronRight />
                                 </IconButton>
                             </HStack>
+
+                            {/* Monthly stats */}
+                            {monthStats.activities > 0 && (
+                                <HStack gap={5} mb={4} flexWrap="wrap">
+                                    <Stat.Root borderWidth="1px" rounded="md" p={3} minW="150px">
+                                        <Stat.Label>Activities</Stat.Label>
+                                        <Stat.ValueText>{monthStats.activities}</Stat.ValueText>
+                                    </Stat.Root>
+                                    <Stat.Root borderWidth="1px" rounded="md" p={3} minW="150px">
+                                        <Stat.Label>Total distance</Stat.Label>
+                                        <Stat.ValueText alignItems="baseline">
+                                            {monthStats.distance.toFixed(1)} <Stat.ValueUnit>km</Stat.ValueUnit>
+                                        </Stat.ValueText>
+                                    </Stat.Root>
+                                    <Stat.Root borderWidth="1px" rounded="md" p={3} minW="150px">
+                                        <Stat.Label>Total moving time</Stat.Label>
+                                        <Stat.ValueText alignItems="baseline">
+                                            {secondsToHHMM(monthStats.movingTime).split(':')[0]}<Stat.ValueUnit>hr</Stat.ValueUnit>
+                                            {secondsToHHMM(monthStats.movingTime).split(':')[1]}<Stat.ValueUnit>min</Stat.ValueUnit>
+                                        </Stat.ValueText>
+                                    </Stat.Root>
+                                    {monthStats.calories > 0 && (
+                                        <Stat.Root borderWidth="1px" rounded="md" p={3} minW="150px">
+                                            <Stat.Label>Total calories</Stat.Label>
+                                            <Stat.ValueText alignItems="baseline">
+                                                {monthStats.calories}<Stat.ValueUnit>kcal</Stat.ValueUnit>
+                                            </Stat.ValueText>
+                                        </Stat.Root>
+                                    )}
+                                </HStack>
+                            )}
 
                             {/* Weekday headers */}
                             <Grid templateColumns="repeat(7, 1fr)" mb={1}>
