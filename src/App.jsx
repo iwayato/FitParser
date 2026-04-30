@@ -221,8 +221,14 @@ const App = () => {
             (routeNameFilter.trim() === '' || route.routeName.toLowerCase().includes(routeNameFilter.toLocaleLowerCase()))
         )
     }).sort((a, b) => {
-        const aVal = a.summary[sortConfig.key];
-        const bVal = b.summary[sortConfig.key];
+        let aVal = a.summary[sortConfig.key];
+        let bVal = b.summary[sortConfig.key];
+
+        // Normalize Date objects (or date strings) to numeric timestamps for reliable comparison
+        if (sortConfig.key === 'startTime') {
+            aVal = aVal ? new Date(aVal).getTime() : 0;
+            bVal = bVal ? new Date(bVal).getTime() : 0;
+        }
 
         if (aVal < bVal) {
             return sortConfig.direction === 'asc' ? -1 : 1;
