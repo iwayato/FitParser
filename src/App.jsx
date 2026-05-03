@@ -12,7 +12,8 @@ import {
     Stat,
     List,
     InputGroup,
-    Input
+    Input,
+    Skeleton,
 } from "@chakra-ui/react";
 import { Toaster, toaster } from "./components/ui/toaster"
 import { useEffect, useState, useRef } from "react";
@@ -26,6 +27,7 @@ import routeStorage from "./utils/routeStorage";
 import Map from "./components/Map";
 import TimeBasedAnalysisDialog from "./components/TimeBasedAnalysisDialog";
 import CalendarDialog from "./components/CalendarDialog";
+import AICoachDialog from "./components/AICoachDialog";
 
 const SortIcon = ({ direction }) => {
     if (direction === 'asc') {
@@ -246,25 +248,33 @@ const App = () => {
             <HStack gap={5} mb={2}>
                 <Stat.Root w={'200px'} borderWidth="1px" rounded="md" p={3}>
                     <Stat.Label>Total routes</Stat.Label>
-                    <Stat.ValueText>{stats?.totalRoutes}</Stat.ValueText>
+                    <Stat.ValueText>
+                        <Skeleton loading={!stats}>{stats?.totalRoutes ?? 0}</Skeleton>
+                    </Stat.ValueText>
                 </Stat.Root>
                 <Stat.Root w={'200px'} borderWidth="1px" rounded="md" p={3}>
                     <Stat.Label>Total distance</Stat.Label>
                     <Stat.ValueText alignItems="baseline">
-                        {Math.round(stats?.totalDistance * 100) / 100} <Stat.ValueUnit>km</Stat.ValueUnit>
+                        <Skeleton loading={!stats}>
+                            {Math.round((stats?.totalDistance ?? 0) * 100) / 100} <Stat.ValueUnit>km</Stat.ValueUnit>
+                        </Skeleton>
                     </Stat.ValueText>
                 </Stat.Root>
                 <Stat.Root w={'200px'} borderWidth="1px" rounded="md" p={3}>
                     <Stat.Label>Total moving time</Stat.Label>
                     <Stat.ValueText alignItems="baseline">
-                        {secondsToHHMM(stats?.totalMovingTime).split(':')[0]}<Stat.ValueUnit>hr</Stat.ValueUnit>
-                        {secondsToHHMM(stats?.totalMovingTime).split(':')[1]}<Stat.ValueUnit>min</Stat.ValueUnit>
+                        <Skeleton loading={!stats}>
+                            {secondsToHHMM(stats?.totalMovingTime ?? 0).split(':')[0]}<Stat.ValueUnit>hr</Stat.ValueUnit>
+                            {secondsToHHMM(stats?.totalMovingTime ?? 0).split(':')[1]}<Stat.ValueUnit>min</Stat.ValueUnit>
+                        </Skeleton>
                     </Stat.ValueText>
                 </Stat.Root>
                 <Stat.Root w={'200px'} borderWidth="1px" rounded="md" p={3}>
                     <Stat.Label>Total calories</Stat.Label>
                     <Stat.ValueText alignItems="baseline">
-                        {stats?.totalCalories}<Stat.ValueUnit>kcal</Stat.ValueUnit>
+                        <Skeleton loading={!stats}>
+                            {stats?.totalCalories ?? 0}<Stat.ValueUnit>kcal</Stat.ValueUnit>
+                        </Skeleton>
                     </Stat.ValueText>
                 </Stat.Root>
             </HStack>
@@ -305,6 +315,7 @@ const App = () => {
                         fileUploadLoader={fileUploadLoader}
                         importLoader={importLoader}
                     />
+                    <AICoachDialog disabled={routes.length === 0} />
                 </HStack>
                 <HStack ml='auto'>
                     <FileUpload.Root

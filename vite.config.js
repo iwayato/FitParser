@@ -1,6 +1,11 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+const coopCoepHeaders = {
+    'Cross-Origin-Opener-Policy': 'same-origin',
+    'Cross-Origin-Embedder-Policy': 'require-corp',
+};
+
 // https://vite.dev/config/
 export default defineConfig({
     plugins: [
@@ -10,4 +15,6 @@ export default defineConfig({
             },
         }),
     ],
+    server: { headers: coopCoepHeaders },
+    preview: { headers: coopCoepHeaders },
 })
