@@ -23,9 +23,10 @@ let globalEngine = null;
 
 const AICoachDialog = ({ disabled }) => {
     const [open, setOpen] = useState(false);
-    const [phase, setPhase] = useState("idle"); // idle | loading | analyzing | done | error    
+    const [phase, setPhase] = useState("idle"); // idle | loading | analyzing | done | error
     const [progress, setProgress] = useState(0);
     const [progressText, setProgressText] = useState("");
+    const [isCached, setIsCached] = useState(false);
     const [analysis, setAnalysis] = useState("");
     const [errorMsg, setErrorMsg] = useState("");
 
@@ -38,6 +39,10 @@ const AICoachDialog = ({ disabled }) => {
                 setPhase("loading");
                 setProgress(0);
                 setProgressText("Initializing...");
+
+                const cache = await caches.open('webllm/model');
+                const keys = await cache.keys();
+                setIsCached(keys.some(req => req.url.includes('Phi-3.5-mini')));
 
                 globalEngine = await CreateMLCEngine(MODEL_ID, {
                     initProgressCallback: (report) => {
@@ -136,9 +141,12 @@ const AICoachDialog = ({ disabled }) => {
                     <Dialog.Body pb={6} overflowY="auto" flex="1">
                         {phase === "loading" && (
                             <VStack gap={4} py={8} align="stretch">
-                                <Text fontWeight="medium" textAlign="center">
-                                    Downloading model (first time only)...
-                                </Text>
+                                <HStack justify="center" py={6} color="fg.muted">
+                                    <Spinner size="sm" />
+                                    <Text fontWeight="medium" textAlign="center">
+                                        {isCached ? "Loading model" : "Downloading model (first time only)"}
+                                    </Text>
+                                </HStack>
                                 <Progress.Root value={progress} w="100%">
                                     <Progress.Track borderRadius="full">
                                         <Progress.Range />
