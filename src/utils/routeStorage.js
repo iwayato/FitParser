@@ -44,13 +44,13 @@ class RouteStorage {
      * @param {string} fileName - Original file name
      * @returns {Promise<number>} ID of saved route
      */
-    async saveRoute(routeData, fileName = 'Untitled Route') {
+    async saveRoute(routeData, fileName = 'Untitled Route', sourcePath = null) {
         if (!this.db) await this.init();
 
         return new Promise((resolve, reject) => {
             const transaction = this.db.transaction([STORE_NAME], 'readwrite');
             const store = transaction.objectStore(STORE_NAME);
-            const request = store.add({ routeName: fileName, ...routeData });
+            const request = store.add({ routeName: fileName, path: sourcePath, ...routeData });
             request.onsuccess = () => resolve(request.result);
             request.onerror = () => reject(request.error);
         });
@@ -107,6 +107,12 @@ class RouteStorage {
             request.onsuccess = () => resolve(request.result);
             request.onerror = () => reject(request.error);
         });
+    }
+
+    async routeExistsByPath(path) {
+        if (!path) return false;
+        const routes = await this.getAllRoutes();
+        return routes.some(route => route.path === path);
     }
 
     /**

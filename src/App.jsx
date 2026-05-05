@@ -19,6 +19,7 @@ import { Toaster, toaster } from "./components/ui/toaster"
 import { useEffect, useState, useRef } from "react";
 import { HiUpload } from "react-icons/hi";
 import { parseFitFile, getElevationProfile } from "./utils/fitParser";
+import { syncLocalFolderFiles } from "./utils/localFolderSync";
 import { secondsToHHMM, formatDate } from "./utils/otherParsers";
 import { MdDriveFileRenameOutline, MdDelete } from "react-icons/md"
 import { CiExport, CiImport } from "react-icons/ci";
@@ -46,10 +47,13 @@ const App = () => {
     const [stats, setStats] = useState()
     const [newRouteName, setNewRouteName] = useState('')
     const [fileUploadLoader, setFileUploadLoader] = useState(false)
+    const [folderSyncLoader, setFolderSyncLoader] = useState(false)
     const [updateRouteNameLoader, setUpdateRouteLoader] = useState(false)
     const [refresh, setRefresh] = useState(false)
     const [exportLoader, setExportLoader] = useState(false)
     const [importLoader, setImportLoader] = useState(false)
+
+    const shouldBackupManualFiles = import.meta.env.ENABLE_MANUAL_FILE_PATH_BACKUP !== 'false'
 
     // Filters
     const inputRef = useRef(null)
@@ -58,14 +62,15 @@ const App = () => {
     // Sort
     const [sortConfig, setSortConfig] = useState({ key: 'startTime', direction: 'desc' });
 
+    const refreshRoutes = async () => {
+        const routes = await routeStorage.getAllRoutes();
+        const stats = await routeStorage.getStats();
+        setRoutes(routes)
+        setStats(stats)
+    }
+
     useEffect(() => {
-        const getRoutesAndStats = async () => {
-            const routes = await routeStorage.getAllRoutes();
-            const stats = await routeStorage.getStats();
-            setRoutes(routes)
-            setStats(stats)
-        }
-        getRoutesAndStats()
+        refreshRoutes()
     }, [fileUploadLoader, updateRouteNameLoader, refresh, importLoader])
 
     const handleSort = (key) => {
@@ -95,7 +100,8 @@ const App = () => {
                         duration: 10000,
                     })
                 } else {
-                    const id = await routeStorage.saveRoute(data, file.name);
+                    const routePath = shouldBackupManualFiles ? `files/${file.name}` : undefined
+                    await routeStorage.saveRoute(data, file.name, routePath);
                 }
             }
         }
@@ -110,6 +116,52 @@ const App = () => {
         }
         finally {
             setFileUploadLoader(false)
+        }
+    }
+
+    const handleSyncLocalFolder = async () => {
+        setFolderSyncLoader(true)
+        try {
+            const { imported, skipped, errors } = await syncLocalFolderFiles()
+            if (imported > 0) {
+                toaster.create({
+                    title: `Imported ${imported} local activity${imported === 1 ? '' : 'ies'}`,
+                    closable: true,
+                    type: 'success',
+                    duration: 5000,
+                })
+            }
+            if (skipped > 0) {
+                toaster.create({
+                    title: `Skipped ${skipped} already imported file${skipped === 1 ? '' : 's'}`,
+                    closable: true,
+                    type: 'info',
+                    duration: 5000,
+                })
+            }
+            if (errors.length > 0) {
+                toaster.create({
+                    title: `${errors.length} file import error${errors.length === 1 ? '' : 's'}`,
+                    description: errors.join('; '),
+                    closable: true,
+                    type: 'warning',
+                    duration: 10000,
+                })
+            }
+
+            await refreshRoutes()
+        }
+        catch (error) {
+            toaster.create({
+                title: "Local folder sync failed",
+                description: error.message || error,
+                closable: true,
+                type: 'error',
+                duration: 10000,
+            })
+        }
+        finally {
+            setFolderSyncLoader(false)
         }
     }
 
@@ -334,6 +386,15 @@ const App = () => {
                             </Button>
                         </FileUpload.Trigger>
                     </FileUpload.Root>
+                    <Button
+                        loading={folderSyncLoader}
+                        disabled={folderSyncLoader}
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSyncLocalFolder}
+                    >
+                        Sync local folder
+                    </Button>
                     <Button
                         loading={exportLoader}
                         disabled={routes.length === 0}
