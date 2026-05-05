@@ -1,6 +1,8 @@
 import os
 import zipfile
 import io
+import time
+import random
 from garminconnect import Garmin
 
 import dotenv
@@ -14,8 +16,64 @@ DASHBOARD_UPLOAD_PATH = os.getenv("FIT_FILE_FOLDER_PATH", os.path.join(BASE_DIR,
 
 first_run = True
 
+MAX_RETRIES = 5
+INITIAL_BACKOFF_SECONDS = 30
+MAX_BACKOFF_SECONDS = 600
+MAX_REQUESTS_PER_MINUTE = 10
+MIN_REQUEST_INTERVAL = 60.0 / MAX_REQUESTS_PER_MINUTE
+last_request_time = 0.0
+
+
 def get_synced_ids():
     return {os.path.splitext(name)[0] for name in os.listdir(DASHBOARD_UPLOAD_PATH) if name.lower().endswith('.fit')}
+
+
+def parse_retry_after(exception):
+    response = getattr(exception, 'response', None)
+    if not response:
+        return None
+    retry_after = response.headers.get('Retry-After')
+    if not retry_after:
+        return None
+    try:
+        return int(retry_after)
+    except ValueError:
+        return None
+
+
+def wait_for_rate_limit():
+    global last_request_time
+    now = time.time()
+    if last_request_time > 0:
+        elapsed = now - last_request_time
+        if elapsed < MIN_REQUEST_INTERVAL:
+            sleep_time = MIN_REQUEST_INTERVAL - elapsed
+            print(f"Rate limiting: sleeping {sleep_time:.2f}s before next request")
+            time.sleep(sleep_time)
+    last_request_time = time.time()
+
+
+def with_retry(func, *args, retries=MAX_RETRIES, operation_description='operation', **kwargs):
+    delay = INITIAL_BACKOFF_SECONDS
+    for attempt in range(1, retries + 1):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            status = getattr(getattr(e, 'response', None), 'status_code', None)
+            message = str(e)
+            if status == 429 or 'Too Many Requests' in message:
+                retry_after = parse_retry_after(e)
+                sleep_time = retry_after if retry_after is not None else delay + random.uniform(0, 10)
+                print(
+                    f"429 received during {operation_description}. "
+                    f"Attempt {attempt}/{retries}. Sleeping for {sleep_time:.1f}s before retrying."
+                )
+                time.sleep(sleep_time)
+                delay = min(delay * 2, MAX_BACKOFF_SECONDS)
+                continue
+            raise
+    raise Exception(f"Exceeded retry limit for {operation_description}")
+
 
 def get_activities(client, number = 10, all=False):
     if all:
@@ -44,15 +102,21 @@ def get_activities(client, number = 10, all=False):
 def main(retries = 5):
     try:
         client = Garmin(GARMIN_EMAIL, GARMIN_PASSWORD)
-        client.login()
+        with_retry(client.login, operation_description='Garmin login')
 
         # 1. Get activities from Garmin Connect
         print("Fetching activities from Garmin Connect...")
-        all_activities = get_activities(client, all=first_run)
+        all_activities = with_retry(
+            get_activities,
+            client,
+            all=first_run,
+            operation_description='fetching activities'
+        )
 
         print(f"Done! Total activities found: {len(all_activities)}")
 
         synced_ids = get_synced_ids()
+        pending_downloads = []
 
         for activity in all_activities:
             activity_id = str(activity["activityId"])
@@ -61,11 +125,22 @@ def main(retries = 5):
                 print(f"Skipping {activity_id}: Already synced.")
                 continue
 
+            pending_downloads.append(activity_id)
+
+        if pending_downloads:
+            print(f"Queued {len(pending_downloads)} activity downloads")
+
+        for activity_id in pending_downloads:
             print(f"New activity found! ID: {activity_id}. Downloading .FIT file...")
 
-            
+            wait_for_rate_limit()
             # 3. Download the FIT file binary
-            fit_data = client.download_activity(activity_id, dl_fmt=client.ActivityDownloadFormat.ORIGINAL)
+            fit_data = with_retry(
+                client.download_activity,
+                activity_id,
+                dl_fmt=client.ActivityDownloadFormat.ORIGINAL,
+                operation_description=f'downloading activity {activity_id}'
+            )
 
             # Debug: Check the downloaded data
             print(f"Downloaded {len(fit_data)} bytes for {activity_id}")
