@@ -41,6 +41,18 @@ def parse_retry_after(exception):
         return None
 
 
+def is_rate_limit_error(exception):
+    message = str(exception)
+    status = getattr(getattr(exception, 'response', None), 'status_code', None)
+    return (
+        status == 429
+        or 'Too Many Requests' in message
+        or '429' in message
+        or 'GarthHTTPError' in message
+        or 'rate limit' in message.lower()
+    )
+
+
 def wait_for_rate_limit():
     global last_request_time
     now = time.time()
@@ -56,16 +68,15 @@ def wait_for_rate_limit():
 def with_retry(func, *args, retries=MAX_RETRIES, operation_description='operation', **kwargs):
     delay = INITIAL_BACKOFF_SECONDS
     for attempt in range(1, retries + 1):
+        wait_for_rate_limit()
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            status = getattr(getattr(e, 'response', None), 'status_code', None)
-            message = str(e)
-            if status == 429 or 'Too Many Requests' in message:
+            if is_rate_limit_error(e):
                 retry_after = parse_retry_after(e)
                 sleep_time = retry_after if retry_after is not None else delay + random.uniform(0, 10)
                 print(
-                    f"429 received during {operation_description}. "
+                    f"Rate limit error during {operation_description}. "
                     f"Attempt {attempt}/{retries}. Sleeping for {sleep_time:.1f}s before retrying."
                 )
                 time.sleep(sleep_time)
@@ -182,6 +193,7 @@ def main(retries = 5):
         if retries == 0:
             raise Exception("Maximum retry attempts reached. Exiting.")
         print(f"Retrying... ({5 - retries}/5)")
+        main(retries=retries)
 
 if __name__ == "__main__":
     import time 
