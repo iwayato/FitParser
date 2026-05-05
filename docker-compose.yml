@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  fitparser-app:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    ports:
+      - "3000:80"
+    volumes:
+      - fit-files:/usr/share/nginx/html/files
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - garmin-sidecar
+    restart: unless-stopped
+
+  garmin-sidecar:
+    build:
+      context: .
+      dockerfile: Dockerfile.sidecar
+    volumes:
+      - fit-files:/app/files
+    env_file:
+      - .env
+    environment:
+      - FIT_FILE_FOLDER_PATH=/app/files
+    restart: unless-stopped
+
+volumes:
+  fit-files:
