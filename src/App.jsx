@@ -1,5 +1,6 @@
 import {
     Button,
+    IconButton,
     FileUpload,
     VStack,
     Heading,
@@ -16,13 +17,16 @@ import {
     Skeleton,
 } from "@chakra-ui/react";
 import { Toaster, toaster } from "./components/ui/toaster"
+import { MenuRoot, MenuTrigger, MenuContent, MenuItem, MenuSeparator } from "./components/ui/menu"
 import { useEffect, useState, useRef } from "react";
 import { HiUpload } from "react-icons/hi";
+import { LuEllipsis } from "react-icons/lu";
 import { parseFitFile } from "./utils/fitParser";
 import { secondsToHHMM, formatDate } from "./utils/otherParsers";
 import { MdDriveFileRenameOutline, MdDelete } from "react-icons/md"
 import { CiExport, CiImport } from "react-icons/ci";
-import { IoSearch } from "react-icons/io5";
+import { IoSearch, IoShareSocialOutline } from "react-icons/io5";
+import { shareRouteImage } from "./utils/routeImageGenerator";
 import routeStorage from "./utils/routeStorage";
 import Map from "./components/Map";
 import TimeBasedAnalysisDialog from "./components/TimeBasedAnalysisDialog";
@@ -50,6 +54,10 @@ const App = () => {
     const [refresh, setRefresh] = useState(false)
     const [exportLoader, setExportLoader] = useState(false)
     const [importLoader, setImportLoader] = useState(false)
+    const [sharingRouteId, setSharingRouteId] = useState(null)
+    const [actionRoute, setActionRoute] = useState(null)
+    const [renameOpen, setRenameOpen] = useState(false)
+    const [deleteOpen, setDeleteOpen] = useState(false)
 
     // Filters
     const inputRef = useRef(null)
@@ -95,7 +103,9 @@ const App = () => {
                         duration: 10000,
                     })
                 } else {
-                    await routeStorage.saveRoute(data, file.name);
+                    const d = new Date(data.summary.startTime);
+                    const defaultName = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+                    await routeStorage.saveRoute(data, defaultName);
                 }
             }
         }
@@ -117,6 +127,7 @@ const App = () => {
         setRefresh(true)
         try {
             await routeStorage.deleteRoute(routeId)
+            setDeleteOpen(false)
             toaster.create({
                 title: "Route deleted successfully",
                 closable: true,
@@ -142,6 +153,7 @@ const App = () => {
         setUpdateRouteLoader(true)
         try {
             await routeStorage.updateRouteName(routeId, newRouteName)
+            setRenameOpen(false)
             toaster.create({
                 title: "Route name changed successfully",
                 closable: true,
@@ -161,6 +173,19 @@ const App = () => {
         finally {
             setUpdateRouteLoader(false)
             setNewRouteName('')
+        }
+    }
+
+    const handleShareRoute = async (route) => {
+        setSharingRouteId(route.id)
+        try {
+            await shareRouteImage(route)
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                toaster.create({ title: 'Could not share route', type: 'error', duration: 3000 })
+            }
+        } finally {
+            setSharingRouteId(null)
         }
     }
 
@@ -431,7 +456,7 @@ const App = () => {
                                 Total Time [hh:mm]
                                 <SortIcon direction={sortConfig.key === 'totalTime' ? sortConfig.direction : null} />
                             </Table.ColumnHeader>
-                            <Table.ColumnHeader>Actions</Table.ColumnHeader>
+                            <Table.ColumnHeader width="1px" whiteSpace="nowrap">Actions</Table.ColumnHeader>
                         </Table.Row>
                     </Table.Header>
                     <Table.Body>
@@ -472,104 +497,40 @@ const App = () => {
                                     <Table.Cell>{Math.round(route.summary.totalDistance * 100) / 100}</Table.Cell>
                                     <Table.Cell>{secondsToHHMM(route.summary.totalMovingTime)}</Table.Cell>
                                     <Table.Cell>{secondsToHHMM(route.summary.totalTime)}</Table.Cell>
-                                    <Table.Cell>
-                                        <HStack gap={2}>
-                                            <Dialog.Root placement={'center'}>
-                                                <Dialog.Trigger asChild>
-                                                    <Button
-                                                        size="xs"
-                                                        variant="subtle"
-                                                        colorPalette={'yellow'}
-                                                    >
-                                                        <MdDriveFileRenameOutline />
-                                                    </Button>
-                                                </Dialog.Trigger>
-                                                <Dialog.Backdrop />
-                                                <Portal>
-                                                    <Dialog.Positioner>
-                                                        <Dialog.Content>
-                                                            <Dialog.Header>
-                                                                <Dialog.Title>Change route name</Dialog.Title>
-                                                            </Dialog.Header>
-                                                            <Dialog.Body>
-                                                                <List.Root gap={3} p={3}>
-                                                                    <List.Item>
-                                                                        Current route name: <b>{route.routeName}</b>
-                                                                    </List.Item>
-                                                                    <List.Item>
-                                                                        <Input
-                                                                            placeholder="New route name"
-                                                                            size={'sm'}
-                                                                            value={newRouteName}
-                                                                            onChange={(e) => setNewRouteName(e.target.value)}
-                                                                        />
-                                                                    </List.Item>
-                                                                </List.Root>
-
-                                                            </Dialog.Body>
-                                                            <Dialog.Footer>
-                                                                <Dialog.ActionTrigger asChild>
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        onClick={() => setNewRouteName('')}
-                                                                    >
-                                                                        Close
-                                                                    </Button>
-                                                                </Dialog.ActionTrigger>
-                                                                <Button
-                                                                    colorPalette={'green'}
-                                                                    variant="subtle"
-                                                                    loading={updateRouteNameLoader}
-                                                                    disabled={newRouteName.trim().length === 0}
-                                                                    onClick={() => handleUpdateRouteName(route.id)}
-                                                                >
-                                                                    Update
-                                                                </Button>
-                                                            </Dialog.Footer>
-                                                        </Dialog.Content>
-                                                    </Dialog.Positioner>
-                                                </Portal>
-                                            </Dialog.Root>
-
-                                            <Dialog.Root placement={'center'}>
-                                                <Dialog.Trigger asChild>
-                                                    <Button
-                                                        size="xs"
-                                                        variant="subtle"
-                                                        colorPalette={'red'}
-                                                    >
-                                                        <MdDelete />
-                                                    </Button>
-                                                </Dialog.Trigger>
-                                                <Dialog.Backdrop />
-                                                <Portal>
-                                                    <Dialog.Positioner>
-                                                        <Dialog.Content>
-                                                            <Dialog.Header>
-                                                                <Dialog.Title>Are you sure you want to delete this route?</Dialog.Title>
-                                                            </Dialog.Header>
-                                                            <Dialog.Footer>
-                                                                <Dialog.ActionTrigger asChild>
-                                                                    <Button
-                                                                        variant="outline"
-                                                                    >
-                                                                        Close
-                                                                    </Button>
-                                                                </Dialog.ActionTrigger>
-                                                                <Button
-                                                                    colorPalette={'red'}
-                                                                    variant="subtle"
-                                                                    loading={refresh}
-                                                                    onClick={() => handleDeleteRoute(route.id)}
-                                                                >
-                                                                    Delete
-                                                                </Button>
-                                                            </Dialog.Footer>
-                                                        </Dialog.Content>
-                                                    </Dialog.Positioner>
-                                                </Portal>
-                                            </Dialog.Root>
-                                        </HStack>
+                                    <Table.Cell width="1px">
+                                        <MenuRoot>
+                                            <MenuTrigger asChild>
+                                                <IconButton
+                                                    size="xs"
+                                                    variant="ghost"
+                                                    loading={sharingRouteId === route.id}
+                                                >
+                                                    <LuEllipsis />
+                                                </IconButton>
+                                            </MenuTrigger>
+                                            <MenuContent>
+                                                <MenuItem
+                                                    value="share"
+                                                    onClick={() => handleShareRoute(route)}
+                                                >
+                                                    <IoShareSocialOutline /> Share
+                                                </MenuItem>
+                                                <MenuItem
+                                                    value="rename"
+                                                    onClick={() => { setActionRoute(route); setRenameOpen(true); }}
+                                                >
+                                                    <MdDriveFileRenameOutline /> Rename
+                                                </MenuItem>
+                                                <MenuSeparator />
+                                                <MenuItem
+                                                    value="delete"
+                                                    color="red.400"
+                                                    onClick={() => { setActionRoute(route); setDeleteOpen(true); }}
+                                                >
+                                                    <MdDelete /> Delete
+                                                </MenuItem>
+                                            </MenuContent>
+                                        </MenuRoot>
                                     </Table.Cell>
                                 </Table.Row>
                             ))
@@ -577,6 +538,84 @@ const App = () => {
                     </Table.Body>
                 </Table.Root>
             </Table.ScrollArea>
+
+            {/* Rename dialog */}
+            <Dialog.Root
+                placement="center"
+                open={renameOpen}
+                onOpenChange={({ open }) => { setRenameOpen(open); if (!open) setNewRouteName(''); }}
+            >
+                <Dialog.Backdrop />
+                <Portal>
+                    <Dialog.Positioner>
+                        <Dialog.Content>
+                            <Dialog.Header>
+                                <Dialog.Title>Change route name</Dialog.Title>
+                            </Dialog.Header>
+                            <Dialog.Body>
+                                <List.Root gap={3} p={3}>
+                                    <List.Item>
+                                        Current route name: <b>{actionRoute?.routeName}</b>
+                                    </List.Item>
+                                    <List.Item>
+                                        <Input
+                                            placeholder="New route name"
+                                            size="sm"
+                                            value={newRouteName}
+                                            onChange={(e) => setNewRouteName(e.target.value)}
+                                        />
+                                    </List.Item>
+                                </List.Root>
+                            </Dialog.Body>
+                            <Dialog.Footer>
+                                <Dialog.ActionTrigger asChild>
+                                    <Button variant="outline">Close</Button>
+                                </Dialog.ActionTrigger>
+                                <Button
+                                    colorPalette="green"
+                                    variant="subtle"
+                                    loading={updateRouteNameLoader}
+                                    disabled={newRouteName.trim().length === 0}
+                                    onClick={() => handleUpdateRouteName(actionRoute?.id)}
+                                >
+                                    Update
+                                </Button>
+                            </Dialog.Footer>
+                        </Dialog.Content>
+                    </Dialog.Positioner>
+                </Portal>
+            </Dialog.Root>
+
+            {/* Delete dialog */}
+            <Dialog.Root
+                placement="center"
+                open={deleteOpen}
+                onOpenChange={({ open }) => setDeleteOpen(open)}
+            >
+                <Dialog.Backdrop />
+                <Portal>
+                    <Dialog.Positioner>
+                        <Dialog.Content>
+                            <Dialog.Header>
+                                <Dialog.Title>Are you sure you want to delete this route?</Dialog.Title>
+                            </Dialog.Header>
+                            <Dialog.Footer>
+                                <Dialog.ActionTrigger asChild>
+                                    <Button variant="outline">Close</Button>
+                                </Dialog.ActionTrigger>
+                                <Button
+                                    colorPalette="red"
+                                    variant="subtle"
+                                    loading={refresh}
+                                    onClick={() => handleDeleteRoute(actionRoute?.id)}
+                                >
+                                    Delete
+                                </Button>
+                            </Dialog.Footer>
+                        </Dialog.Content>
+                    </Dialog.Positioner>
+                </Portal>
+            </Dialog.Root>
 
             <Toaster />
 
