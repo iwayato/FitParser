@@ -29,8 +29,6 @@ import { LuChevronLeft, LuChevronRight } from "react-icons/lu"
 import { useEffect, useState } from "react";
 import { IoAnalytics } from "react-icons/io5";
 import { DatePicker } from "react-datepicker";
-import { startOfMonth, endOfMonth } from "date-fns"
-import { formatDate } from "../utils/otherParsers";
 import { secondsToHHMM } from "../utils/otherParsers";
 import routeStorage from "../utils/routeStorage";
 import "react-datepicker/dist/react-datepicker.css";
@@ -39,8 +37,8 @@ const TimeBasedAnalysisDialog = ({ disabled, fileUploadLoader, importLoader }) =
 
     const [data, setData] = useState([]);
     const [stats, setStats] = useState();
-    const [startDate, setStartDate] = useState(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
-    const [endDate, setEndDate] = useState(new Date());
+    const [startDate, setStartDate] = useState(() => new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+    const [endDate, setEndDate] = useState(() => new Date());
 
     useEffect(() => {
         const getRoutesByPeriod = async () => {
@@ -200,7 +198,7 @@ const TimeBasedAnalysisDialog = ({ disabled, fileUploadLoader, importLoader }) =
                                                         <YAxis />
                                                         <Tooltip
                                                             labelStyle={{ color: "black" }}
-                                                            formatter={(value, name, props) => {
+                                                            formatter={(value) => {
                                                                 return [`${Math.round(value * 100) / 100}`, "Avg speed"];
                                                             }}
                                                         />
@@ -234,7 +232,7 @@ const TimeBasedAnalysisDialog = ({ disabled, fileUploadLoader, importLoader }) =
                                                         <YAxis />
                                                         <Tooltip
                                                             labelStyle={{ color: "black" }}
-                                                            formatter={(value, name, props) => {
+                                                            formatter={(value) => {
                                                                 return [`${Math.round(value * 100) / 100}`, "Max speed"];
                                                             }}
                                                         />
@@ -268,7 +266,7 @@ const TimeBasedAnalysisDialog = ({ disabled, fileUploadLoader, importLoader }) =
                                                         <YAxis />
                                                         <Tooltip
                                                             labelStyle={{ color: "black" }}
-                                                            formatter={(value, name, props) => {
+                                                            formatter={(value) => {
                                                                 return [`${Math.round(value * 100) / 100}`, "Total calories"];
                                                             }}
                                                         />
@@ -302,7 +300,7 @@ const TimeBasedAnalysisDialog = ({ disabled, fileUploadLoader, importLoader }) =
                                                         <YAxis />
                                                         <Tooltip
                                                             labelStyle={{ color: "black" }}
-                                                            formatter={(value, name, props) => {
+                                                            formatter={(value) => {
                                                                 return [`${Math.round(value * 100) / 100}`, "Total distance"];
                                                             }}
                                                         />
@@ -336,7 +334,7 @@ const TimeBasedAnalysisDialog = ({ disabled, fileUploadLoader, importLoader }) =
                                                         <YAxis tickFormatter={(value) => secondsToHHMM(value)}/>
                                                         <Tooltip
                                                             labelStyle={{ color: "black" }}
-                                                            formatter={(value, name, props) => {
+                                                            formatter={(value) => {
                                                                 return [`${secondsToHHMM(value)}`, "Total moving time"];
                                                             }}
                                                         />

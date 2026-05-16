@@ -1,7 +1,6 @@
 import {
     MapContainer, 
-    TileLayer, 
-    useMap, 
+    TileLayer,
     Marker, 
     Popup,
     Polyline,

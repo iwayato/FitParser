@@ -18,7 +18,7 @@ import {
 import { Toaster, toaster } from "./components/ui/toaster"
 import { useEffect, useState, useRef } from "react";
 import { HiUpload } from "react-icons/hi";
-import { parseFitFile, getElevationProfile } from "./utils/fitParser";
+import { parseFitFile } from "./utils/fitParser";
 import { secondsToHHMM, formatDate } from "./utils/otherParsers";
 import { MdDriveFileRenameOutline, MdDelete } from "react-icons/md"
 import { CiExport, CiImport } from "react-icons/ci";
@@ -95,7 +95,7 @@ const App = () => {
                         duration: 10000,
                     })
                 } else {
-                    const id = await routeStorage.saveRoute(data, file.name);
+                    await routeStorage.saveRoute(data, file.name);
                 }
             }
         }
@@ -436,7 +436,7 @@ const App = () => {
                     </Table.Header>
                     <Table.Body>
                         {
-                            filteredRoutes.map((route, index) => (
+                            filteredRoutes.map((route) => (
                                 <Table.Row key={route.id}>
                                     <Table.Cell>
                                         <Dialog.Root size='cover' >

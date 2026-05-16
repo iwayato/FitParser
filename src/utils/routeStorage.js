@@ -29,7 +29,7 @@ class RouteStorage {
 
                 // Create object store if it doesn't exist
                 if (!db.objectStoreNames.contains(STORE_NAME)) {
-                    const objectStore = db.createObjectStore(STORE_NAME, {
+                    db.createObjectStore(STORE_NAME, {
                         keyPath: 'id',
                         autoIncrement: true
                     });
@@ -226,7 +226,7 @@ class RouteStorage {
 
         for (const route of routes) {
             // Remove the id so IndexedDB generates new ones
-            const { id, ...routeWithoutId } = route;
+            const { id: _id, ...routeWithoutId } = route;
             await this.saveRoute(routeWithoutId, routeWithoutId.routeName);
             count++;
         }
