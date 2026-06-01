@@ -4,13 +4,25 @@ A browser-based tool to visualize and analyze cycling routes from `.fit` files â
 
 **[â†’ Live demo](https://bike-routes.vercel.app/)**
 
----
-
 ## The problem
 
 The Van Rysel [GPS100](https://support.decathlon.co.uk/van-rysel-gps-100) is a cheap (~$30 USD) bike GPS that records basic data: the route, avg speed, moving time, max speed, etc. The issue is Decathlon Connect, its companion app, which never reliably synced the device. Routes were stuck on the device.
 
 Buying a more expensive GPS for my use case just to fix a software problem felt wrong. So I vibe coded this instead.
+
+## View routes
+![View Routes](public/view_routes.gif)
+
+## View stats
+![View Stats](public/view_stats.gif)
+
+## Calendar
+![Calendar](public/view_calendar.png)
+
+## AI Coach
+![Calendar](public/ai_coach.png)
+
+---
 
 ## What it does
 
