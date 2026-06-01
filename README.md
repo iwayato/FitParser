@@ -49,7 +49,7 @@ Everything is stored in your browser's IndexedDB. Nothing is sent to any server.
 - React + Vite
 - Chakra UI
 - Leaflet (maps)
-- [fit-file-parser](https://github.com/jimmykane/fit-file-parser)
+- [fit-file-parser](https://github.com/jimmykane/fit-parser)
 - WebLLM (in-browser AI)
 
 ## Run locally
