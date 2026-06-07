@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 
 const coopCoepHeaders = {
     'Cross-Origin-Opener-Policy': 'same-origin',
-    'Cross-Origin-Embedder-Policy': 'require-corp',
+    'Cross-Origin-Embedder-Policy': 'credentialless',
 };
 
 // https://vite.dev/config/

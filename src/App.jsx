@@ -279,7 +279,7 @@ const App = () => {
     });
 
     return (
-        <VStack p={{ base: 3, md: 8 }} gap={5}>
+        <VStack p={{ base: 3, md: 8 }} gap={5} h="100dvh" overflow="hidden">
 
             {/* Stats */}
             <SimpleGrid columns={{ base: 2, md: 4 }} gap={3} w="100%">
@@ -422,12 +422,12 @@ const App = () => {
             />
 
             {/* Mobile cards */}
-            <VStack display={{ base: 'flex', md: 'none' }} gap={2} w="100%" overflowY="auto" maxH="calc(100vh - 310px)">
+            <VStack display={{ base: 'flex', md: 'none' }} gap={2} w="100%" overflowY="auto" flex="1" minH="0">
                 {filteredRoutes.map((route) => (
                     <Box key={route.id} w="100%" borderWidth="1px" rounded="md" p={3}>
                         <HStack justify="space-between" align="flex-start">
                             <VStack align="flex-start" gap={1} flex={1} minW={0}>
-                                <Dialog.Root size="cover">
+                                <Dialog.Root size="full">
                                     <Dialog.Trigger asChild>
                                         <Link colorPalette="teal" fontWeight="semibold" fontSize="sm">
                                             {route.routeName}
@@ -436,13 +436,13 @@ const App = () => {
                                     <Dialog.Backdrop />
                                     <Portal>
                                         <Dialog.Positioner>
-                                            <Dialog.Content>
+                                            <Dialog.Content display="flex" flexDirection="column" h="100dvh">
                                                 <Dialog.Header>
                                                     <Dialog.Title>
                                                         {route.routeName}: {formatDate(new Date(route.summary.startTime.toString()))}
                                                     </Dialog.Title>
                                                 </Dialog.Header>
-                                                <Dialog.Body>
+                                                <Dialog.Body p={0} flex="1" minH="0" overflow="hidden">
                                                     <Map points={route.points.map(point => [point.lat, point.lng])} />
                                                 </Dialog.Body>
                                                 <Dialog.CloseTrigger asChild>
@@ -487,7 +487,7 @@ const App = () => {
             </VStack>
 
             {/* Table (desktop only) */}
-            <Table.ScrollArea display={{ base: 'none', md: 'block' }} h="calc(100vh - 230px)" w="100%">
+            <Table.ScrollArea display={{ base: 'none', md: 'block' }} flex="1" minH="0" w="100%">
                 <Table.Root size="sm" striped showColumnBorder stickyHeader>
                     <Table.Header>
                         <Table.Row>
@@ -568,7 +568,7 @@ const App = () => {
                             filteredRoutes.map((route) => (
                                 <Table.Row key={route.id}>
                                     <Table.Cell>
-                                        <Dialog.Root size='cover' >
+                                        <Dialog.Root size="cover">
                                             <Dialog.Trigger asChild>
                                                 <Link colorPalette="teal">
                                                     {route.routeName}
