@@ -31,7 +31,7 @@ import { secondsToHHMM } from "../utils/otherParsers";
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-const CalendarDialog = ({ disabled, fileUploadLoader, importLoader }) => {
+const CalendarDialog = ({ fileUploadLoader, importLoader, open, onOpenChange }) => {
     const today = new Date();
     const [currentMonth, setCurrentMonth] = useState(startOfMonth(today));
     const [routes, setRoutes] = useState([]);
@@ -69,12 +69,7 @@ const CalendarDialog = ({ disabled, fileUploadLoader, importLoader }) => {
     );
 
     return (
-        <Dialog.Root size="full">
-            <Dialog.Trigger asChild>
-                <Button disabled={disabled} variant="outline" size="sm">
-                    <BsCalendar3 /> Calendar
-                </Button>
-            </Dialog.Trigger>
+        <Dialog.Root size="full" open={open} onOpenChange={onOpenChange}>
             <Dialog.Backdrop />
             <Portal>
                 <Dialog.Positioner>

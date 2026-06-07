@@ -3,8 +3,10 @@ import {
     IconButton,
     FileUpload,
     VStack,
-    Heading,
     HStack,
+    SimpleGrid,
+    Box,
+    Text,
     Table,
     Link,
     Dialog,
@@ -20,9 +22,9 @@ import { Toaster, toaster } from "./components/ui/toaster"
 import { MenuRoot, MenuTrigger, MenuContent, MenuItem, MenuSeparator } from "./components/ui/menu"
 import { useEffect, useState, useRef } from "react";
 import { HiUpload } from "react-icons/hi";
-import { LuEllipsis } from "react-icons/lu";
+import { LuEllipsis, LuMenu, LuChartLine, LuCalendar, LuBrain, LuUpload, LuDownload } from "react-icons/lu";
 import { parseFitFile } from "./utils/fitParser";
-import { secondsToHHMM, formatDate } from "./utils/otherParsers";
+import { secondsToHHMM, formatDate, formatDateShort } from "./utils/otherParsers";
 import { MdDriveFileRenameOutline, MdDelete } from "react-icons/md"
 import { CiExport, CiImport } from "react-icons/ci";
 import { IoSearch, IoShareSocialOutline } from "react-icons/io5";
@@ -58,6 +60,15 @@ const App = () => {
     const [actionRoute, setActionRoute] = useState(null)
     const [renameOpen, setRenameOpen] = useState(false)
     const [deleteOpen, setDeleteOpen] = useState(false)
+
+    // Dialog open states
+    const [timeAnalysisOpen, setTimeAnalysisOpen] = useState(false)
+    const [calendarOpen, setCalendarOpen] = useState(false)
+    const [aiCoachOpen, setAICoachOpen] = useState(false)
+
+    // File input refs
+    const fitUploadRef = useRef(null)
+    const jsonUploadRef = useRef(null)
 
     // Filters
     const inputRef = useRef(null)
@@ -268,17 +279,17 @@ const App = () => {
     });
 
     return (
-        <VStack p={8} gap={5}>
+        <VStack p={{ base: 3, md: 8 }} gap={5}>
 
             {/* Stats */}
-            <HStack gap={5} mb={2}>
-                <Stat.Root w={'200px'} borderWidth="1px" rounded="md" p={3}>
+            <SimpleGrid columns={{ base: 2, md: 4 }} gap={3} w="100%">
+                <Stat.Root borderWidth="1px" rounded="md" p={3}>
                     <Stat.Label>Total routes</Stat.Label>
                     <Stat.ValueText>
                         <Skeleton loading={!stats}>{stats?.totalRoutes ?? 0}</Skeleton>
                     </Stat.ValueText>
                 </Stat.Root>
-                <Stat.Root w={'200px'} borderWidth="1px" rounded="md" p={3}>
+                <Stat.Root borderWidth="1px" rounded="md" p={3}>
                     <Stat.Label>Total distance</Stat.Label>
                     <Stat.ValueText alignItems="baseline">
                         <Skeleton loading={!stats}>
@@ -286,7 +297,7 @@ const App = () => {
                         </Skeleton>
                     </Stat.ValueText>
                 </Stat.Root>
-                <Stat.Root w={'200px'} borderWidth="1px" rounded="md" p={3}>
+                <Stat.Root borderWidth="1px" rounded="md" p={3}>
                     <Stat.Label>Total moving time</Stat.Label>
                     <Stat.ValueText alignItems="baseline">
                         <Skeleton loading={!stats}>
@@ -295,7 +306,7 @@ const App = () => {
                         </Skeleton>
                     </Stat.ValueText>
                 </Stat.Root>
-                <Stat.Root w={'200px'} borderWidth="1px" rounded="md" p={3}>
+                <Stat.Root borderWidth="1px" rounded="md" p={3}>
                     <Stat.Label>Total calories</Stat.Label>
                     <Stat.ValueText alignItems="baseline">
                         <Skeleton loading={!stats}>
@@ -303,93 +314,180 @@ const App = () => {
                         </Skeleton>
                     </Stat.ValueText>
                 </Stat.Root>
-            </HStack>
+            </SimpleGrid>
 
-            {/* Upload, Export, Import buttons */}
-            <HStack gap={5} w={'100%'}>
-                <HStack>
-                    <InputGroup
-                        startElement={<IoSearch />}
-                        endElement={routeNameFilter ? (
-                            <CloseButton
-                                size="xs"
-                                onClick={() => {
-                                    setRouteNameFilter('')
-                                    inputRef.current?.focus()
-                                }}
-                                me="-2"
-                            />
-                        ) : undefined}
-                        w={'220px'}
-                    >
-                        <Input
-                            ref={inputRef}
-                            disabled={routes.length === 0}
-                            placeholder="Search by route name"
-                            size={'sm'}
-                            value={routeNameFilter}
-                            onChange={(e) => setRouteNameFilter(e.target.value)}
+            {/* Toolbar */}
+            <HStack gap={2} w="100%">
+                <InputGroup
+                    startElement={<IoSearch />}
+                    endElement={routeNameFilter ? (
+                        <CloseButton
+                            size="xs"
+                            onClick={() => {
+                                setRouteNameFilter('')
+                                inputRef.current?.focus()
+                            }}
+                            me="-2"
                         />
-                    </InputGroup>
-                    <TimeBasedAnalysisDialog
+                    ) : undefined}
+                    flex={1}
+                >
+                    <Input
+                        ref={inputRef}
                         disabled={routes.length === 0}
-                        fileUploadLoader={fileUploadLoader}
-                        importLoader={importLoader}
+                        placeholder="Search by route name"
+                        size={'sm'}
+                        value={routeNameFilter}
+                        onChange={(e) => setRouteNameFilter(e.target.value)}
                     />
-                    <CalendarDialog
-                        disabled={routes.length === 0}
-                        fileUploadLoader={fileUploadLoader}
-                        importLoader={importLoader}
-                    />
-                    <AICoachDialog disabled={routes.length === 0} />
-                </HStack>
-                <HStack ml='auto'>
-                    <FileUpload.Root
-                        onFileAccept={(e) => handleFitFile(e.files)}
-                        accept={[".fit"]}
-                        maxFiles={100}
-                    >
-                        <FileUpload.HiddenInput />
-                        <FileUpload.Trigger asChild>
-                            <Button
-                                loading={fileUploadLoader}
-                                variant="outline"
-                                size="sm"
-                            >
-                                <HiUpload /> Upload route
-                            </Button>
-                        </FileUpload.Trigger>
-                    </FileUpload.Root>
-                    <Button
-                        loading={exportLoader}
-                        disabled={routes.length === 0}
-                        variant="outline"
-                        size="sm"
-                        onClick={handleExportRoutes}
-                    >
-                        <CiExport /> Export routes
+                </InputGroup>
+
+                {/* Hidden file inputs triggered from menu */}
+                <FileUpload.Root onFileAccept={(e) => handleFitFile(e.files)} accept={[".fit"]} maxFiles={100} display="none">
+                    <FileUpload.HiddenInput ref={fitUploadRef} />
+                </FileUpload.Root>
+                <FileUpload.Root onFileAccept={(e) => handleImportRoutes(e.files[0])} accept={[".json"]} maxFiles={1} display="none">
+                    <FileUpload.HiddenInput ref={jsonUploadRef} />
+                </FileUpload.Root>
+
+                {/* Mobile: hamburger menu */}
+                <MenuRoot>
+                    <MenuTrigger asChild>
+                        <IconButton display={{ base: 'flex', md: 'none' }} variant="outline" size="sm" aria-label="Actions">
+                            <LuMenu />
+                        </IconButton>
+                    </MenuTrigger>
+                    <MenuContent>
+                        <MenuItem value="time-analysis" disabled={routes.length === 0} onClick={() => setTimeAnalysisOpen(true)}>
+                            <LuChartLine /> Time Based Analysis
+                        </MenuItem>
+                        <MenuItem value="calendar" disabled={routes.length === 0} onClick={() => setCalendarOpen(true)}>
+                            <LuCalendar /> Calendar
+                        </MenuItem>
+                        <MenuItem value="ai-coach" disabled={routes.length === 0} onClick={() => setAICoachOpen(true)}>
+                            <LuBrain /> AI Coach
+                        </MenuItem>
+                        <MenuSeparator />
+                        <MenuItem value="upload" onClick={() => fitUploadRef.current?.click()}>
+                            <LuUpload /> Upload route
+                        </MenuItem>
+                        <MenuItem value="export" disabled={routes.length === 0 || exportLoader} onClick={handleExportRoutes}>
+                            <LuDownload /> Export routes
+                        </MenuItem>
+                        <MenuItem value="import" onClick={() => jsonUploadRef.current?.click()}>
+                            <CiImport /> Import routes
+                        </MenuItem>
+                    </MenuContent>
+                </MenuRoot>
+
+                {/* Desktop: inline buttons */}
+                <HStack display={{ base: 'none', md: 'flex' }} gap={2}>
+                    <Button disabled={routes.length === 0} variant="outline" size="sm" onClick={() => setTimeAnalysisOpen(true)}>
+                        <LuChartLine /> Time Based Analysis
                     </Button>
-                    <FileUpload.Root
-                        onFileAccept={(e) => handleImportRoutes(e.files[0])}
-                        accept={[".json"]}
-                        maxFiles={1}
-                    >
-                        <FileUpload.HiddenInput />
-                        <FileUpload.Trigger asChild>
-                            <Button
-                                loading={importLoader}
-                                variant="outline"
-                                size="sm"
-                            >
-                                <CiImport /> Import routes
-                            </Button>
-                        </FileUpload.Trigger>
-                    </FileUpload.Root>
+                    <Button disabled={routes.length === 0} variant="outline" size="sm" onClick={() => setCalendarOpen(true)}>
+                        <LuCalendar /> Calendar
+                    </Button>
+                    <Button disabled={routes.length === 0} variant="outline" size="sm" onClick={() => setAICoachOpen(true)}>
+                        <LuBrain /> AI Coach
+                    </Button>
+                    <Button loading={fileUploadLoader} variant="outline" size="sm" onClick={() => fitUploadRef.current?.click()}>
+                        <LuUpload /> Upload route
+                    </Button>
+                    <Button loading={exportLoader} disabled={routes.length === 0} variant="outline" size="sm" onClick={handleExportRoutes}>
+                        <LuDownload /> Export routes
+                    </Button>
+                    <Button loading={importLoader} variant="outline" size="sm" onClick={() => jsonUploadRef.current?.click()}>
+                        <CiImport /> Import routes
+                    </Button>
                 </HStack>
             </HStack>
 
-            {/* Table */}
-            <Table.ScrollArea h="calc(100vh - 230px)" w="100%">
+            {/* Dialogs controlled from menu */}
+            <TimeBasedAnalysisDialog
+                fileUploadLoader={fileUploadLoader}
+                importLoader={importLoader}
+                open={timeAnalysisOpen}
+                onOpenChange={({ open }) => setTimeAnalysisOpen(open)}
+            />
+            <CalendarDialog
+                fileUploadLoader={fileUploadLoader}
+                importLoader={importLoader}
+                open={calendarOpen}
+                onOpenChange={({ open }) => setCalendarOpen(open)}
+            />
+            <AICoachDialog
+                open={aiCoachOpen}
+                onOpenChange={({ open }) => setAICoachOpen(open)}
+            />
+
+            {/* Mobile cards */}
+            <VStack display={{ base: 'flex', md: 'none' }} gap={2} w="100%" overflowY="auto" maxH="calc(100vh - 310px)">
+                {filteredRoutes.map((route) => (
+                    <Box key={route.id} w="100%" borderWidth="1px" rounded="md" p={3}>
+                        <HStack justify="space-between" align="flex-start">
+                            <VStack align="flex-start" gap={1} flex={1} minW={0}>
+                                <Dialog.Root size="cover">
+                                    <Dialog.Trigger asChild>
+                                        <Link colorPalette="teal" fontWeight="semibold" fontSize="sm">
+                                            {route.routeName}
+                                        </Link>
+                                    </Dialog.Trigger>
+                                    <Dialog.Backdrop />
+                                    <Portal>
+                                        <Dialog.Positioner>
+                                            <Dialog.Content>
+                                                <Dialog.Header>
+                                                    <Dialog.Title>
+                                                        {route.routeName}: {formatDate(new Date(route.summary.startTime.toString()))}
+                                                    </Dialog.Title>
+                                                </Dialog.Header>
+                                                <Dialog.Body>
+                                                    <Map points={route.points.map(point => [point.lat, point.lng])} />
+                                                </Dialog.Body>
+                                                <Dialog.CloseTrigger asChild>
+                                                    <CloseButton size="lg" />
+                                                </Dialog.CloseTrigger>
+                                            </Dialog.Content>
+                                        </Dialog.Positioner>
+                                    </Portal>
+                                </Dialog.Root>
+                                <Text fontSize="xs" color="gray.400">
+                                    {formatDateShort(new Date(route.summary.startTime.toString()))}
+                                </Text>
+                                <HStack gap={3} flexWrap="wrap">
+                                    <Text fontSize="sm"><Text as="span" fontWeight="bold">{Math.round(route.summary.totalDistance * 100) / 100}</Text> km</Text>
+                                    <Text fontSize="sm"><Text as="span" fontWeight="bold">{secondsToHHMM(route.summary.totalMovingTime)}</Text> h</Text>
+                                    {route.summary.avgSpeed > 0 && <Text fontSize="sm"><Text as="span" fontWeight="bold">{Math.round(route.summary.avgSpeed * 10) / 10}</Text> km/h</Text>}
+                                    {route.summary.totalCalories > 0 && <Text fontSize="sm"><Text as="span" fontWeight="bold">{Math.round(route.summary.totalCalories)}</Text> kcal</Text>}
+                                </HStack>
+                            </VStack>
+                            <MenuRoot>
+                                <MenuTrigger asChild>
+                                    <IconButton size="xs" variant="ghost" loading={sharingRouteId === route.id}>
+                                        <LuEllipsis />
+                                    </IconButton>
+                                </MenuTrigger>
+                                <MenuContent>
+                                    <MenuItem value="share" onClick={() => handleShareRoute(route)}>
+                                        <IoShareSocialOutline /> Share
+                                    </MenuItem>
+                                    <MenuItem value="rename" onClick={() => { setActionRoute(route); setRenameOpen(true); }}>
+                                        <MdDriveFileRenameOutline /> Rename
+                                    </MenuItem>
+                                    <MenuSeparator />
+                                    <MenuItem value="delete" color="red.400" onClick={() => { setActionRoute(route); setDeleteOpen(true); }}>
+                                        <MdDelete /> Delete
+                                    </MenuItem>
+                                </MenuContent>
+                            </MenuRoot>
+                        </HStack>
+                    </Box>
+                ))}
+            </VStack>
+
+            {/* Table (desktop only) */}
+            <Table.ScrollArea display={{ base: 'none', md: 'block' }} h="calc(100vh - 230px)" w="100%">
                 <Table.Root size="sm" striped showColumnBorder stickyHeader>
                     <Table.Header>
                         <Table.Row>
@@ -404,6 +502,7 @@ const App = () => {
                                 <SortIcon direction={sortConfig.key === 'startTime' ? sortConfig.direction : null} />
                             </Table.ColumnHeader>
                             <Table.ColumnHeader
+                                display={{ base: 'none', md: 'table-cell' }}
                                 cursor="pointer"
                                 userSelect='none'
                                 _hover={{ bg: 'gray.800' }}
@@ -413,6 +512,7 @@ const App = () => {
                                 <SortIcon direction={sortConfig.key === 'avgSpeed' ? sortConfig.direction : null} />
                             </Table.ColumnHeader>
                             <Table.ColumnHeader
+                                display={{ base: 'none', md: 'table-cell' }}
                                 cursor="pointer"
                                 userSelect='none'
                                 _hover={{ bg: 'gray.800' }}
@@ -422,12 +522,13 @@ const App = () => {
                                 <SortIcon direction={sortConfig.key === 'maxSpeed' ? sortConfig.direction : null} />
                             </Table.ColumnHeader>
                             <Table.ColumnHeader
+                                display={{ base: 'none', md: 'table-cell' }}
                                 cursor="pointer"
                                 userSelect='none'
                                 _hover={{ bg: 'gray.800' }}
                                 onClick={() => handleSort('totalCalories')}
                             >
-                                Total calories [kcal]
+                                Calories [kcal]
                                 <SortIcon direction={sortConfig.key === 'totalCalories' ? sortConfig.direction : null} />
                             </Table.ColumnHeader>
                             <Table.ColumnHeader
@@ -436,25 +537,27 @@ const App = () => {
                                 _hover={{ bg: 'gray.800' }}
                                 onClick={() => handleSort('totalDistance')}
                             >
-                                Total Distance [km]
+                                Distance [km]
                                 <SortIcon direction={sortConfig.key === 'totalDistance' ? sortConfig.direction : null} />
                             </Table.ColumnHeader>
                             <Table.ColumnHeader
+                                display={{ base: 'none', md: 'table-cell' }}
                                 cursor="pointer"
                                 userSelect='none'
                                 _hover={{ bg: 'gray.800' }}
                                 onClick={() => handleSort('totalMovingTime')}
                             >
-                                Total Moving Time [hh:mm]
+                                Moving Time
                                 <SortIcon direction={sortConfig.key === 'totalMovingTime' ? sortConfig.direction : null} />
                             </Table.ColumnHeader>
                             <Table.ColumnHeader
+                                display={{ base: 'none', md: 'table-cell' }}
                                 cursor="pointer"
                                 userSelect='none'
                                 _hover={{ bg: 'gray.800' }}
                                 onClick={() => handleSort('totalTime')}
                             >
-                                Total Time [hh:mm]
+                                Total Time
                                 <SortIcon direction={sortConfig.key === 'totalTime' ? sortConfig.direction : null} />
                             </Table.ColumnHeader>
                             <Table.ColumnHeader width="1px" whiteSpace="nowrap">Actions</Table.ColumnHeader>
@@ -492,12 +595,12 @@ const App = () => {
                                         </Dialog.Root>
                                     </Table.Cell>
                                     <Table.Cell>{formatDate(new Date(route.summary.startTime.toString()))}</Table.Cell>
-                                    <Table.Cell>{Math.round(route.summary.avgSpeed * 100) / 100}</Table.Cell>
-                                    <Table.Cell>{Math.round(route.summary.maxSpeed * 100) / 100}</Table.Cell>
-                                    <Table.Cell>{Math.round(route.summary.totalCalories * 100) / 100}</Table.Cell>
+                                    <Table.Cell display={{ base: 'none', md: 'table-cell' }}>{Math.round(route.summary.avgSpeed * 100) / 100}</Table.Cell>
+                                    <Table.Cell display={{ base: 'none', md: 'table-cell' }}>{Math.round(route.summary.maxSpeed * 100) / 100}</Table.Cell>
+                                    <Table.Cell display={{ base: 'none', md: 'table-cell' }}>{Math.round(route.summary.totalCalories * 100) / 100}</Table.Cell>
                                     <Table.Cell>{Math.round(route.summary.totalDistance * 100) / 100}</Table.Cell>
-                                    <Table.Cell>{secondsToHHMM(route.summary.totalMovingTime)}</Table.Cell>
-                                    <Table.Cell>{secondsToHHMM(route.summary.totalTime)}</Table.Cell>
+                                    <Table.Cell display={{ base: 'none', md: 'table-cell' }}>{secondsToHHMM(route.summary.totalMovingTime)}</Table.Cell>
+                                    <Table.Cell display={{ base: 'none', md: 'table-cell' }}>{secondsToHHMM(route.summary.totalTime)}</Table.Cell>
                                     <Table.Cell width="1px">
                                         <MenuRoot>
                                             <MenuTrigger asChild>

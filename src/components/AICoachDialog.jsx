@@ -21,8 +21,7 @@ const MODEL_ID = "Phi-3.5-mini-instruct-q4f16_1-MLC";
 // Persist engine across open/close cycles so we don't re-download
 let globalEngine = null;
 
-const AICoachDialog = ({ disabled }) => {
-    const [open, setOpen] = useState(false);
+const AICoachDialog = ({ open, onOpenChange }) => {
     const [phase, setPhase] = useState("idle"); // idle | loading | analyzing | done | error
     const [progress, setProgress] = useState(0);
     const [progressText, setProgressText] = useState("");
@@ -87,7 +86,7 @@ const AICoachDialog = ({ disabled }) => {
     };
 
     const handleOpenChange = (e) => {
-        setOpen(e.open);
+        onOpenChange(e);
         if (e.open) runAnalysis();
     };
 
@@ -120,11 +119,6 @@ const AICoachDialog = ({ disabled }) => {
 
     return (
         <Dialog.Root open={open} onOpenChange={handleOpenChange} size="xl" closeOnInteractOutside={false} closeOnEscape={false}>
-            <Dialog.Trigger asChild>
-                <Button disabled={disabled} variant="outline" size="sm">
-                    <LuBrain /> AI Coach
-                </Button>
-            </Dialog.Trigger>
             <Dialog.Backdrop />
             <Dialog.Positioner>
                 <Dialog.Content maxH="80vh" overflow="hidden" display="flex" flexDir="column">

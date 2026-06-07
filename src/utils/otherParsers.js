@@ -11,6 +11,9 @@ export function secondsToHHMM(seconds) {
 }
 
 export function formatDate(dateToFormat) {
-    const formattedDate = format(dateToFormat, 'dd/MM/yyyy hh:mm:ss a');
-    return formattedDate;
+    return format(dateToFormat, 'dd/MM/yyyy hh:mm:ss a');
+}
+
+export function formatDateShort(dateToFormat) {
+    return format(dateToFormat, 'dd/MM/yyyy');
 }
