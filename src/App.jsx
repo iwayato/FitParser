@@ -179,11 +179,12 @@ const App = () => {
     const handleShareRoute = async (route) => {
         setSharingRouteId(route.id)
         try {
-            await shareRouteImage(route)
-        } catch (err) {
-            if (err.name !== 'AbortError') {
-                toaster.create({ title: 'Could not share route', type: 'error', duration: 3000 })
+            const result = await shareRouteImage(route)
+            if (result === 'copied') {
+                toaster.create({ title: 'Image copied to clipboard', type: 'success', duration: 2500 })
             }
+        } catch {
+            toaster.create({ title: 'Could not copy image', type: 'error', duration: 3000 })
         } finally {
             setSharingRouteId(null)
         }

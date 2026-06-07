@@ -212,20 +212,21 @@ export async function generateRouteImage(route) {
 
 export async function shareRouteImage(route) {
     const blob = await generateRouteImage(route);
-    const safeName = (route.routeName || 'route').replace(/[^a-z0-9_\-]/gi, '_');
-    const file = new File([blob], `${safeName}.png`, { type: 'image/png' });
 
-    if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: route.routeName });
-    } else {
-        // Fallback: download the image
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${safeName}.png`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+    if (navigator.clipboard?.write) {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        return 'copied';
     }
+
+    // Fallback: download the image
+    const safeName = (route.routeName || 'route').replace(/[^a-z0-9_\-]/gi, '_');
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${safeName}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return 'downloaded';
 }
