@@ -16,6 +16,32 @@ function waitForIceGathering(pc) {
 
 // Extract only the fields needed to establish a DataChannel connection,
 // reducing QR data from ~1200 chars to ~400 chars.
+// Keep only IPv4 UDP host candidates — enough for same-WiFi, avoids
+// mDNS/IPv6/TCP bloat that can triple the QR payload on HTTPS Chrome.
+function filterCandidates(lines) {
+    return lines
+        .filter(l => l.startsWith('a=candidate:'))
+        .map(l => l.slice(12))
+        .filter(c => {
+            const parts = c.split(' ');
+            const proto = parts[2]?.toLowerCase();
+            const addr = parts[4];
+            const typ = parts[7];
+            return proto === 'udp' && typ === 'host' && addr && addr.includes('.') && !addr.endsWith('.local');
+        })
+        .slice(0, 2); // at most 2 candidates
+}
+
+// Strip colons from fingerprint hex to save 31 chars; restore on decode.
+function encodeFingerprint(fp) {
+    const [algo, hex] = fp.split(' ');
+    return algo + ' ' + hex.replace(/:/g, '');
+}
+function decodeFingerprint(fp) {
+    const [algo, hex] = fp.split(' ');
+    return algo + ' ' + hex.match(/.{2}/g).join(':');
+}
+
 function sdpToCompact(sdp, type) {
     const lines = sdp.split(/\r?\n/);
     const get = (prefix) => lines.find(l => l.startsWith(prefix))?.slice(prefix.length);
@@ -23,9 +49,9 @@ function sdpToCompact(sdp, type) {
         t: type[0], // 'o' or 'a'
         u: get('a=ice-ufrag:'),
         p: get('a=ice-pwd:'),
-        f: get('a=fingerprint:'),
+        f: encodeFingerprint(get('a=fingerprint:')),
         s: get('a=setup:'),
-        c: lines.filter(l => l.startsWith('a=candidate:')).map(l => l.slice(12)),
+        c: filterCandidates(lines),
     };
 }
 
@@ -44,7 +70,7 @@ function compactToSdp(obj) {
         `a=ice-ufrag:${obj.u}`,
         `a=ice-pwd:${obj.p}`,
         'a=ice-options:trickle',
-        `a=fingerprint:${obj.f}`,
+        `a=fingerprint:${decodeFingerprint(obj.f)}`,
         `a=setup:${obj.s}`,
         'a=mid:0',
         'a=sctp-port:5000',
