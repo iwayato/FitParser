@@ -116,7 +116,7 @@ export default function SyncDialog({ open, onClose, onSyncDone }) {
             scanLoopRef.current = setInterval(() => {
                 const video = videoRef.current;
                 const canvas = canvasRef.current;
-                if (!video || !canvas || video.readyState < video.HAVE_ENOUGH_DATA) return;
+                if (!video || !canvas || video.readyState < 2) return;
 
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
