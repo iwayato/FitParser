@@ -10,6 +10,7 @@ import {
     IconButton,
     Grid,
     Stat,
+    SimpleGrid,
 } from "@chakra-ui/react";
 import { useState, useEffect } from "react";
 import { LuChevronLeft, LuChevronRight } from "react-icons/lu";
@@ -35,7 +36,7 @@ const CalendarDialog = ({ fileUploadLoader, importLoader, open, onOpenChange }) 
     const today = new Date();
     const [currentMonth, setCurrentMonth] = useState(startOfMonth(today));
     const [routes, setRoutes] = useState([]);
-    const [hoveredDay, setHoveredDay] = useState(null);
+    const [activeDay, setActiveDay] = useState(null);
 
     useEffect(() => {
         const fetchRoutes = async () => {
@@ -104,18 +105,18 @@ const CalendarDialog = ({ fileUploadLoader, importLoader, open, onOpenChange }) 
 
                             {/* Monthly stats */}
                             {monthStats.activities > 0 && (
-                                <HStack gap={5} mb={4} flexWrap="wrap">
-                                    <Stat.Root borderWidth="1px" rounded="md" p={3} minW="150px">
+                                <SimpleGrid columns={{ base: 2, md: 4 }} gap={3} mb={4}>
+                                    <Stat.Root borderWidth="1px" rounded="md" p={3}>
                                         <Stat.Label>Activities</Stat.Label>
                                         <Stat.ValueText>{monthStats.activities}</Stat.ValueText>
                                     </Stat.Root>
-                                    <Stat.Root borderWidth="1px" rounded="md" p={3} minW="150px">
+                                    <Stat.Root borderWidth="1px" rounded="md" p={3}>
                                         <Stat.Label>Total distance</Stat.Label>
                                         <Stat.ValueText alignItems="baseline">
                                             {monthStats.distance.toFixed(1)} <Stat.ValueUnit>km</Stat.ValueUnit>
                                         </Stat.ValueText>
                                     </Stat.Root>
-                                    <Stat.Root borderWidth="1px" rounded="md" p={3} minW="150px">
+                                    <Stat.Root borderWidth="1px" rounded="md" p={3}>
                                         <Stat.Label>Total moving time</Stat.Label>
                                         <Stat.ValueText alignItems="baseline">
                                             {secondsToHHMM(monthStats.movingTime).split(':')[0]}<Stat.ValueUnit>hr</Stat.ValueUnit>
@@ -123,14 +124,14 @@ const CalendarDialog = ({ fileUploadLoader, importLoader, open, onOpenChange }) 
                                         </Stat.ValueText>
                                     </Stat.Root>
                                     {monthStats.calories > 0 && (
-                                        <Stat.Root borderWidth="1px" rounded="md" p={3} minW="150px">
+                                        <Stat.Root borderWidth="1px" rounded="md" p={3}>
                                             <Stat.Label>Total calories</Stat.Label>
                                             <Stat.ValueText alignItems="baseline">
                                                 {monthStats.calories}<Stat.ValueUnit>kcal</Stat.ValueUnit>
                                             </Stat.ValueText>
                                         </Stat.Root>
                                     )}
-                                </HStack>
+                                </SimpleGrid>
                             )}
 
                             {/* Weekday headers */}
@@ -165,7 +166,7 @@ const CalendarDialog = ({ fileUploadLoader, importLoader, open, onOpenChange }) 
                                         <Box
                                             key={idx}
                                             position="relative"
-                                            minH="90px"
+                                            minH={{ base: '48px', md: '90px' }}
                                             p={1.5}
                                             borderRadius="md"
                                             borderWidth="1px"
@@ -173,11 +174,12 @@ const CalendarDialog = ({ fileUploadLoader, importLoader, open, onOpenChange }) 
                                             bg={isCurrentMonth ? undefined : "bg.subtle"}
                                             opacity={isCurrentMonth ? 1 : 0.35}
                                             cursor={hasRoutes && isCurrentMonth ? "pointer" : "default"}
-                                            onMouseEnter={() => hasRoutes && isCurrentMonth && setHoveredDay(day)}
-                                            onMouseLeave={() => setHoveredDay(null)}
+                                            onMouseEnter={() => hasRoutes && isCurrentMonth && setActiveDay(day)}
+                                            onMouseLeave={() => setActiveDay(null)}
+                                            onClick={() => hasRoutes && isCurrentMonth && setActiveDay(d => d && isSameDay(d, day) ? null : day)}
                                         >
                                             <Text
-                                                fontSize="sm"
+                                                fontSize={{ base: 'xs', md: 'sm' }}
                                                 fontWeight={isToday ? "bold" : "normal"}
                                                 color={isToday ? "green.500" : undefined}
                                                 mb={1}
@@ -185,38 +187,34 @@ const CalendarDialog = ({ fileUploadLoader, importLoader, open, onOpenChange }) 
                                                 {format(day, 'd')}
                                             </Text>
 
-                                            {/* Route labels inside cell */}
+                                            {/* Route labels — text on desktop, dots on mobile */}
                                             {isCurrentMonth && hasRoutes && (
-                                                <VStack gap={1} align="stretch">
-                                                    {dayRoutes.slice(0, 2).map((route, i) => (
-                                                        <Box
-                                                            key={i}
-                                                            bg="green.subtle"
-                                                            borderRadius="sm"
-                                                            px={1}
-                                                            py={0.5}
-                                                        >
-                                                            <Text
-                                                                fontSize="xs"
-                                                                color="green.fg"
-                                                                overflow="hidden"
-                                                                textOverflow="ellipsis"
-                                                                whiteSpace="nowrap"
-                                                            >
-                                                                {route.routeName}
-                                                            </Text>
-                                                        </Box>
-                                                    ))}
-                                                    {dayRoutes.length > 2 && (
-                                                        <Text fontSize="xs" color="fg.muted" pl={1}>
-                                                            +{dayRoutes.length - 2} more
-                                                        </Text>
-                                                    )}
-                                                </VStack>
+                                                <>
+                                                    <VStack gap={1} align="stretch" display={{ base: 'none', md: 'flex' }}>
+                                                        {dayRoutes.slice(0, 2).map((route, i) => (
+                                                            <Box key={i} bg="green.subtle" borderRadius="sm" px={1} py={0.5}>
+                                                                <Text fontSize="xs" color="green.fg" overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+                                                                    {route.routeName}
+                                                                </Text>
+                                                            </Box>
+                                                        ))}
+                                                        {dayRoutes.length > 2 && (
+                                                            <Text fontSize="xs" color="fg.muted" pl={1}>+{dayRoutes.length - 2} more</Text>
+                                                        )}
+                                                    </VStack>
+                                                    <HStack gap={1} display={{ base: 'flex', md: 'none' }} flexWrap="wrap">
+                                                        {dayRoutes.slice(0, 3).map((_, i) => (
+                                                            <Box key={i} w="6px" h="6px" borderRadius="full" bg="green.500" />
+                                                        ))}
+                                                        {dayRoutes.length > 3 && (
+                                                            <Box w="6px" h="6px" borderRadius="full" bg="green.300" />
+                                                        )}
+                                                    </HStack>
+                                                </>
                                             )}
 
-                                            {/* Hover tooltip */}
-                                            {hoveredDay && isSameDay(hoveredDay, day) && (
+                                            {/* Tooltip — hover on desktop, tap on mobile */}
+                                            {activeDay && isSameDay(activeDay, day) && (
                                                 <Box
                                                     position="absolute"
                                                     zIndex={20}

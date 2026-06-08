@@ -11,7 +11,9 @@ import {
     Carousel,
     IconButton,
     VStack,
-    Stat
+    Stat,
+    SimpleGrid,
+    NativeSelect,
 } from "@chakra-ui/react";
 import {
     AreaChart,
@@ -80,91 +82,63 @@ const TimeBasedAnalysisDialog = ({ fileUploadLoader, importLoader, open, onOpenC
                         </Dialog.Header>
                         <Dialog.Body>
 
-                            {/* Period Selector */}
-                            <HStack spacing={2}>
-                                <Button
-                                    size="sm"
-                                    variant="subtle"
-                                    colorPalette={'green'}
-                                    onClick={() => {
-                                        setStartDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
-                                        setEndDate(new Date())
-                                    }}
-                                >
-                                    Last week
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant="subtle"
-                                    colorPalette={'green'}
-                                    onClick={() => {
-                                        setStartDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
-                                        setEndDate(new Date())
-                                    }}
-                                >
-                                    Last month
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant="subtle"
-                                    colorPalette={'green'}
-                                    onClick={() => {
-                                        setStartDate(new Date(new Date().getFullYear(), 0, 1))
-                                        setEndDate(new Date())
-                                    }}
-                                >
-                                    Year to date
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant="subtle"
-                                    colorPalette={'green'}
-                                    onClick={() => {
-                                        setStartDate(new Date(Date.now() - 365 * 24 * 60 * 60 * 1000))
-                                        setEndDate(new Date())
-                                    }}
-                                >
-                                    Last year
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant="subtle"
-                                    colorPalette={'green'}
-                                    onClick={() => {
-                                        setStartDate(new Date(0))
-                                        setEndDate(new Date())
-                                    }}
-                                >
-                                    Beginning
-                                </Button>
+                            {/* Period Selector — dropdown on mobile, buttons on desktop */}
+                            <Box display={{ base: 'block', md: 'none' }}>
+                                <NativeSelect.Root size="sm">
+                                    <NativeSelect.Field
+                                        defaultValue="week"
+                                        onChange={(e) => {
+                                            const v = e.target.value;
+                                            if (v === 'week') { setStartDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)); setEndDate(new Date()); }
+                                            if (v === 'month') { setStartDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)); setEndDate(new Date()); }
+                                            if (v === 'ytd') { setStartDate(new Date(new Date().getFullYear(), 0, 1)); setEndDate(new Date()); }
+                                            if (v === 'year') { setStartDate(new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)); setEndDate(new Date()); }
+                                            if (v === 'all') { setStartDate(new Date(0)); setEndDate(new Date()); }
+                                        }}
+                                    >
+                                        <option value="week">Last week</option>
+                                        <option value="month">Last month</option>
+                                        <option value="ytd">Year to date</option>
+                                        <option value="year">Last year</option>
+                                        <option value="all">Beginning</option>
+                                    </NativeSelect.Field>
+                                    <NativeSelect.Indicator />
+                                </NativeSelect.Root>
+                            </Box>
+                            <HStack spacing={2} display={{ base: 'none', md: 'flex' }}>
+                                <Button size="sm" variant="subtle" colorPalette={'green'} onClick={() => { setStartDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)); setEndDate(new Date()); }}>Last week</Button>
+                                <Button size="sm" variant="subtle" colorPalette={'green'} onClick={() => { setStartDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)); setEndDate(new Date()); }}>Last month</Button>
+                                <Button size="sm" variant="subtle" colorPalette={'green'} onClick={() => { setStartDate(new Date(new Date().getFullYear(), 0, 1)); setEndDate(new Date()); }}>Year to date</Button>
+                                <Button size="sm" variant="subtle" colorPalette={'green'} onClick={() => { setStartDate(new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)); setEndDate(new Date()); }}>Last year</Button>
+                                <Button size="sm" variant="subtle" colorPalette={'green'} onClick={() => { setStartDate(new Date(0)); setEndDate(new Date()); }}>Beginning</Button>
                             </HStack>
 
                             {/* Stats */}
-                            <HStack gap={5} mt={6}>
-                                <Stat.Root w={'200px'} borderWidth="1px" rounded="md" p={3}>
+                            <SimpleGrid columns={{ base: 2, md: 4 }} gap={3} mt={6}>
+                                <Stat.Root borderWidth="1px" rounded="md" p={3}>
                                     <Stat.Label>Total routes</Stat.Label>
                                     <Stat.ValueText>{stats?.totalRoutes}</Stat.ValueText>
                                 </Stat.Root>
-                                <Stat.Root w={'200px'} borderWidth="1px" rounded="md" p={3}>
+                                <Stat.Root borderWidth="1px" rounded="md" p={3}>
                                     <Stat.Label>Total distance</Stat.Label>
                                     <Stat.ValueText alignItems="baseline">
                                         {Math.round(stats?.totalDistance * 100) / 100} <Stat.ValueUnit>km</Stat.ValueUnit>
                                     </Stat.ValueText>
                                 </Stat.Root>
-                                <Stat.Root w={'200px'} borderWidth="1px" rounded="md" p={3}>
+                                <Stat.Root borderWidth="1px" rounded="md" p={3}>
                                     <Stat.Label>Total moving time</Stat.Label>
                                     <Stat.ValueText alignItems="baseline">
                                         {secondsToHHMM(stats?.totalMovingTime).split(':')[0]}<Stat.ValueUnit>hr</Stat.ValueUnit>
                                         {secondsToHHMM(stats?.totalMovingTime).split(':')[1]}<Stat.ValueUnit>min</Stat.ValueUnit>
                                     </Stat.ValueText>
                                 </Stat.Root>
-                                <Stat.Root w={'200px'} borderWidth="1px" rounded="md" p={3}>
+                                <Stat.Root borderWidth="1px" rounded="md" p={3}>
                                     <Stat.Label>Total calories</Stat.Label>
                                     <Stat.ValueText alignItems="baseline">
                                         {stats?.totalCalories}<Stat.ValueUnit>kcal</Stat.ValueUnit>
                                     </Stat.ValueText>
                                 </Stat.Root>
-                            </HStack>
+                            </SimpleGrid>
 
                             {/* Charts */}
                             <Carousel.Root slideCount={5} mt='30px'>
@@ -174,7 +148,7 @@ const TimeBasedAnalysisDialog = ({ fileUploadLoader, importLoader, open, onOpenC
                                     <Carousel.Item key={2} index={2}>
                                         <VStack gap={5}>
                                             <Text fontSize='2xl'>Avg speed [km/h]</Text>
-                                            <div style={{ width: '100%', height: 'calc(100vh - 400px)', minHeight: '100px', minWidth: '100px'}}>
+                                            <div style={{ width: '100%', height: 'clamp(200px, calc(100dvh - 450px), 500px)'}}>
                                                 <ResponsiveContainer>
                                                     <AreaChart
                                                         data={data.map(row => {
@@ -208,7 +182,7 @@ const TimeBasedAnalysisDialog = ({ fileUploadLoader, importLoader, open, onOpenC
                                     <Carousel.Item key={3} index={3}>
                                         <VStack gap={5}>
                                             <Text fontSize='2xl'>Max speed [km/h]</Text>
-                                            <div style={{ width: '100%', height: 'calc(100vh - 400px)', minHeight: '100px', minWidth: '100px'}}>
+                                            <div style={{ width: '100%', height: 'clamp(200px, calc(100dvh - 450px), 500px)'}}>
                                                 <ResponsiveContainer>
                                                     <AreaChart
                                                         data={data.map(row => {
@@ -242,7 +216,7 @@ const TimeBasedAnalysisDialog = ({ fileUploadLoader, importLoader, open, onOpenC
                                     <Carousel.Item key={4} index={4}>
                                         <VStack gap={5}>
                                             <Text fontSize='2xl'>Total calories [kcal]</Text>
-                                            <div style={{ width: '100%', height: 'calc(100vh - 400px)', minHeight: '100px', minWidth: '100px'}}>
+                                            <div style={{ width: '100%', height: 'clamp(200px, calc(100dvh - 450px), 500px)'}}>
                                                 <ResponsiveContainer>
                                                     <AreaChart
                                                         data={data.map(row => {
@@ -276,7 +250,7 @@ const TimeBasedAnalysisDialog = ({ fileUploadLoader, importLoader, open, onOpenC
                                     <Carousel.Item key={5} index={5}>
                                         <VStack gap={5}>
                                             <Text fontSize='2xl'>Total distance [km]</Text>
-                                            <div style={{ width: '100%', height: 'calc(100vh - 400px)', minHeight: '100px', minWidth: '100px'}}>
+                                            <div style={{ width: '100%', height: 'clamp(200px, calc(100dvh - 450px), 500px)'}}>
                                                 <ResponsiveContainer>
                                                     <AreaChart
                                                         data={data.map(row => {
@@ -310,7 +284,7 @@ const TimeBasedAnalysisDialog = ({ fileUploadLoader, importLoader, open, onOpenC
                                     <Carousel.Item key={6} index={6}>
                                         <VStack gap={5}>
                                             <Text fontSize='2xl'>Total moving time [hh:mm]</Text>
-                                            <div style={{ width: '100%', height: 'calc(100vh - 400px)', minHeight: '100px', minWidth: '100px'}}>
+                                            <div style={{ width: '100%', height: 'clamp(200px, calc(100dvh - 450px), 500px)'}}>
                                                 <ResponsiveContainer>
                                                     <AreaChart
                                                         data={data.map(row => {

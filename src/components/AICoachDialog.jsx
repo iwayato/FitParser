@@ -10,7 +10,7 @@ import {
     HStack,
     Spinner,
 } from "@chakra-ui/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LuBrain } from "react-icons/lu";
 import { CreateMLCEngine } from "@mlc-ai/web-llm";
 import routeStorage from "../utils/routeStorage";
@@ -73,6 +73,7 @@ const AICoachDialog = ({ open, onOpenChange }) => {
                 full += chunk.choices[0]?.delta?.content || "";
                 setAnalysis(full);
             }
+            setPhase("done");
         }
         catch (err) {
             console.error(err);
@@ -80,14 +81,14 @@ const AICoachDialog = ({ open, onOpenChange }) => {
             setErrorMsg(err.message || "An error occurred loading the model.");
             setPhase("error");
         }
-        finally {
-            setPhase("done");
-        }
     };
+
+    useEffect(() => {
+        if (open) runAnalysis();
+    }, [open]);
 
     const handleOpenChange = (e) => {
         onOpenChange(e);
-        if (e.open) runAnalysis();
     };
 
     // Render markdown-like text: bold **text**, headings with #
@@ -118,10 +119,10 @@ const AICoachDialog = ({ open, onOpenChange }) => {
     };
 
     return (
-        <Dialog.Root open={open} onOpenChange={handleOpenChange} size="xl" closeOnInteractOutside={false} closeOnEscape={false}>
+        <Dialog.Root open={open} onOpenChange={handleOpenChange} size="full" closeOnInteractOutside={false} closeOnEscape={false}>
             <Dialog.Backdrop />
             <Dialog.Positioner>
-                <Dialog.Content maxH="80vh" overflow="hidden" display="flex" flexDir="column">
+                <Dialog.Content h="100dvh" maxH="100dvh" overflow="hidden" display="flex" flexDir="column">
                     <Dialog.Header>
                         <HStack>
                             <LuBrain />
