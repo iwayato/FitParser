@@ -46,6 +46,13 @@ Plug your GPS into your laptop, open the app, upload the `.fit` file and the app
 - Zero API calls, zero data leaves your machine
 - Currently uses **Phi-3.5-mini-instruct** (~2.3 GB, cached in the browser after the first download). You can swap it for any [WebLLM-supported model](https://github.com/mlc-ai/web-llm?tab=readme-ov-file#built-in-models) by changing the `MODEL_ID` constant in [`src/components/AICoachDialog.jsx`](src/components/AICoachDialog.jsx)
 
+**Device sync** *(no server, no account)*
+- Sync routes between devices over your local WiFi using WebRTC P2P
+- Works entirely in the browser — route data never leaves your network
+- QR-code based handshake: laptop shows a QR, phone scans it, phone shows a QR, laptop scans it, done
+- Only sends routes the receiving device doesn't already have (diff by activity timestamp)
+- Handles large routes automatically via chunked transfer
+
 **Data management**
 - Export all routes to a `.json` backup file
 - Import from a previous backup
@@ -87,6 +94,7 @@ A few pointers to get oriented:
 - **Map view** is in [`src/components/Map.jsx`](src/components/Map.jsx) (Leaflet)
 - **AI Coach logic** — the model setup is in [`src/components/AICoachDialog.jsx`](src/components/AICoachDialog.jsx) and the prompt is built in [`src/utils/trainingAnalyzer.js`](src/utils/trainingAnalyzer.js)
 - **Analysis dialogs** (time-based and calendar) are in [`src/components/`](src/components/)
+- **Device sync** — WebRTC signaling and SDP encoding in [`src/utils/webrtcSync.js`](src/utils/webrtcSync.js), UI flow in [`src/components/SyncDialog.jsx`](src/components/SyncDialog.jsx)
 
 ## Compatibility
 
