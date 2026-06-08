@@ -164,9 +164,23 @@ export default function SyncDialog({ open, onClose, onSyncDone }) {
                     setSyncProgress({ sent: 0, total: missing.length });
                     setStatusText(`Sending ${missing.length} route(s)...`);
 
+                    const CHUNK = 128 * 1024; // 128 KB — safely under 256 KB DataChannel limit
                     for (let i = 0; i < missing.length; i++) {
                         const { id: _id, ...data } = missing[i];
-                        await sendData(channel, JSON.stringify({ type: "route", data }));
+                        const dataJson = JSON.stringify(data);
+                        if (dataJson.length <= CHUNK) {
+                            await sendData(channel, JSON.stringify({ type: "route", data }));
+                        } else {
+                            const numChunks = Math.ceil(dataJson.length / CHUNK);
+                            await sendData(channel, JSON.stringify({ type: "route-begin", chunks: numChunks }));
+                            for (let j = 0; j < numChunks; j++) {
+                                await sendData(channel, JSON.stringify({
+                                    type: "route-part",
+                                    i: j,
+                                    d: dataJson.slice(j * CHUNK, (j + 1) * CHUNK),
+                                }));
+                            }
+                        }
                         setSyncProgress({ sent: i + 1, total: missing.length });
                     }
                     await sendData(channel, JSON.stringify({ type: "done" }));
@@ -234,6 +248,13 @@ export default function SyncDialog({ open, onClose, onSyncDone }) {
                         channel.send(JSON.stringify({ type: "have", startTimes }));
                         setStatusText("Sending route list to laptop...");
                     };
+                    let pendingChunks = null; // { total, parts[] } for large routes
+                    const saveRoute = async (data) => {
+                        await routeStorage.saveRoute(data, data.routeName || "Route");
+                        received++;
+                        setSyncProgress({ sent: received, total });
+                        setStatusText(`Receiving routes... ${received}/${total}`);
+                    };
                     channel.onmessage = async (ev) => {
                         try {
                             const msg = JSON.parse(ev.data);
@@ -242,10 +263,17 @@ export default function SyncDialog({ open, onClose, onSyncDone }) {
                                 setSyncProgress({ sent: 0, total });
                                 setStatusText(total === 0 ? "No new routes." : `Receiving ${total} route(s)...`);
                             } else if (msg.type === "route") {
-                                await routeStorage.saveRoute(msg.data, msg.data.routeName || "Ruta");
-                                received++;
-                                setSyncProgress({ sent: received, total });
-                                setStatusText(`Receiving routes... ${received}/${total}`);
+                                await saveRoute(msg.data);
+                            } else if (msg.type === "route-begin") {
+                                pendingChunks = { total: msg.chunks, parts: new Array(msg.chunks) };
+                            } else if (msg.type === "route-part") {
+                                pendingChunks.parts[msg.i] = msg.d;
+                                const filled = pendingChunks.parts.filter(p => p !== undefined).length;
+                                if (filled === pendingChunks.total) {
+                                    const data = JSON.parse(pendingChunks.parts.join(""));
+                                    pendingChunks = null;
+                                    await saveRoute(data);
+                                }
                             } else if (msg.type === "done") {
                                 setSyncCount(received);
                                 setStep(STEP.DONE);
