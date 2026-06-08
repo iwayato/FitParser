@@ -171,7 +171,7 @@ export default function SyncDialog({ open, onClose, onSyncDone }) {
                 if (onSyncDone) onSyncDone();
             };
 
-            const url = await QRCode.toDataURL(encoded, { errorCorrectionLevel: "L", width: 280 });
+            const url = await QRCode.toDataURL(encoded, { errorCorrectionLevel: "M", width: 300 });
             setQrDataUrl(url);
             setStatusText("Scan this QR with your mobile");
         } catch (err) {
@@ -200,9 +200,14 @@ export default function SyncDialog({ open, onClose, onSyncDone }) {
     const startReceiver = useCallback(() => {
         onDetectedRef.current = async (offerEncoded) => {
             setStep(STEP.CONNECTING);
-            setStatusText("Processing...");
+            setStatusText("QR detected — creating answer...");
             try {
-                const { pc, encoded } = await createAnswer(offerEncoded);
+                let pc, encoded;
+                try {
+                    ({ pc, encoded } = await createAnswer(offerEncoded));
+                } catch (err) {
+                    throw new Error(`SDP error: ${err.message}. The QR may have been misread — retry.`);
+                }
                 pcRef.current = pc;
 
                 pc.ondatachannel = (e) => {
@@ -234,7 +239,8 @@ export default function SyncDialog({ open, onClose, onSyncDone }) {
                     };
                 };
 
-                const url = await QRCode.toDataURL(encoded, { errorCorrectionLevel: "L", width: 280 });
+                setStatusText("Generating response QR...");
+                const url = await QRCode.toDataURL(encoded, { errorCorrectionLevel: "M", width: 300 });
                 setQrDataUrl(url);
                 setStep(STEP.SHOW_ANSWER_QR);
                 setStatusText("Show this QR to the laptop camera");
