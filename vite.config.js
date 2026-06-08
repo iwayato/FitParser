@@ -15,6 +15,6 @@ export default defineConfig({
             },
         }),
     ],
-    server: { headers: coopCoepHeaders },
+    server: { host: true, headers: coopCoepHeaders },
     preview: { headers: coopCoepHeaders },
 })

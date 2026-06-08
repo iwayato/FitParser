@@ -77,13 +77,25 @@ export default function SyncDialog({ open, onClose, onSyncDone }) {
 
         (async () => {
             let stream;
+            if (!navigator.mediaDevices?.getUserMedia) {
+                if (!cancelled) {
+                    setStatusText("Camera API not available. Make sure the app is served over HTTPS.");
+                    setStep(STEP.ERROR);
+                }
+                return;
+            }
             try {
                 stream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: "environment" },
                 });
-            } catch {
+            } catch (err) {
                 if (!cancelled) {
-                    setStatusText("Could not access the camera.");
+                    const msg = err.name === "NotAllowedError"
+                        ? "Camera permission denied."
+                        : err.name === "NotSupportedError" || err.name === "TypeError"
+                            ? "Camera not available — app must be served over HTTPS."
+                            : `Camera error: ${err.name}`;
+                    setStatusText(msg);
                     setStep(STEP.ERROR);
                 }
                 return;
@@ -94,6 +106,11 @@ export default function SyncDialog({ open, onClose, onSyncDone }) {
             if (videoRef.current) {
                 videoRef.current.srcObject = stream;
                 videoRef.current.play().catch(() => {});
+            } else {
+                setStatusText("Video element not ready — please try again.");
+                setStep(STEP.ERROR);
+                stream.getTracks().forEach(t => t.stop());
+                return;
             }
 
             scanLoopRef.current = setInterval(() => {
