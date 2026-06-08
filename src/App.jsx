@@ -22,7 +22,7 @@ import { Toaster, toaster } from "./components/ui/toaster"
 import { MenuRoot, MenuTrigger, MenuContent, MenuItem, MenuSeparator } from "./components/ui/menu"
 import { useEffect, useState, useRef } from "react";
 import { HiUpload } from "react-icons/hi";
-import { LuEllipsis, LuMenu, LuChartLine, LuCalendar, LuBrain, LuUpload, LuDownload } from "react-icons/lu";
+import { LuEllipsis, LuMenu, LuChartLine, LuCalendar, LuBrain, LuUpload, LuDownload, LuRefreshCw } from "react-icons/lu";
 import { parseFitFile } from "./utils/fitParser";
 import { secondsToHHMM, formatDate, formatDateShort } from "./utils/otherParsers";
 import { MdDriveFileRenameOutline, MdDelete } from "react-icons/md"
@@ -34,6 +34,7 @@ import Map from "./components/Map";
 import TimeBasedAnalysisDialog from "./components/TimeBasedAnalysisDialog";
 import CalendarDialog from "./components/CalendarDialog";
 import AICoachDialog from "./components/AICoachDialog";
+import SyncDialog from "./components/SyncDialog";
 
 const SortIcon = ({ direction }) => {
     if (direction === 'asc') {
@@ -65,6 +66,7 @@ const App = () => {
     const [timeAnalysisOpen, setTimeAnalysisOpen] = useState(false)
     const [calendarOpen, setCalendarOpen] = useState(false)
     const [aiCoachOpen, setAICoachOpen] = useState(false)
+    const [syncOpen, setSyncOpen] = useState(false)
 
     // File input refs
     const fitUploadRef = useRef(null)
@@ -374,6 +376,9 @@ const App = () => {
                         <MenuItem value="import" onClick={() => jsonUploadRef.current?.click()}>
                             <CiImport /> Import routes
                         </MenuItem>
+                        <MenuItem value="sync" onClick={() => setSyncOpen(true)}>
+                            <LuRefreshCw /> Sync between devices
+                        </MenuItem>
                     </MenuContent>
                 </MenuRoot>
 
@@ -397,6 +402,9 @@ const App = () => {
                     <Button loading={importLoader} variant="outline" size="sm" onClick={() => jsonUploadRef.current?.click()}>
                         <CiImport /> Import routes
                     </Button>
+                    <Button variant="outline" size="sm" onClick={() => setSyncOpen(true)}>
+                        <LuRefreshCw /> Sync
+                    </Button>
                 </HStack>
             </HStack>
 
@@ -416,6 +424,11 @@ const App = () => {
             <AICoachDialog
                 open={aiCoachOpen}
                 onOpenChange={({ open }) => setAICoachOpen(open)}
+            />
+            <SyncDialog
+                open={syncOpen}
+                onClose={() => setSyncOpen(false)}
+                onSyncDone={() => setRefresh(r => !r)}
             />
 
             {/* Mobile cards */}
