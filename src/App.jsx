@@ -364,9 +364,6 @@ const App = () => {
                         <MenuItem value="calendar" disabled={routes.length === 0} onClick={() => setCalendarOpen(true)}>
                             <LuCalendar /> Calendar
                         </MenuItem>
-                        <MenuItem value="ai-coach" disabled={routes.length === 0} onClick={() => setAICoachOpen(true)}>
-                            <LuBrain /> AI Coach
-                        </MenuItem>
                         <MenuSeparator />
                         <MenuItem value="upload" onClick={() => fitUploadRef.current?.click()}>
                             <LuUpload /> Upload route
