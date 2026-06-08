@@ -35,6 +35,7 @@ export default function SyncDialog({ open, onClose, onSyncDone }) {
     const pcRef = useRef(null);
     const streamRef = useRef(null);
     const scanLoopRef = useRef(null);
+    const onDetectedRef = useRef(null); // set before entering a scan step
 
     const stopCamera = useCallback(() => {
         if (scanLoopRef.current) {
@@ -49,6 +50,7 @@ export default function SyncDialog({ open, onClose, onSyncDone }) {
 
     const cleanup = useCallback(() => {
         stopCamera();
+        onDetectedRef.current = null;
         if (pcRef.current) {
             pcRef.current.close();
             pcRef.current = null;
@@ -68,40 +70,54 @@ export default function SyncDialog({ open, onClose, onSyncDone }) {
         if (!open) cleanup();
     }, [open, cleanup]);
 
-    // Start camera and scan for a QR code, calling onDetected once with the data
-    const startScan = useCallback(async (onDetected) => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "environment" },
-            });
+    // Camera starts in a useEffect so the <video> element is guaranteed to be in the DOM
+    useEffect(() => {
+        if (step !== STEP.SCAN_OFFER && step !== STEP.SCAN_ANSWER) return;
+        let cancelled = false;
+
+        (async () => {
+            let stream;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment" },
+                });
+            } catch {
+                if (!cancelled) {
+                    setStatusText("Could not access the camera.");
+                    setStep(STEP.ERROR);
+                }
+                return;
+            }
+            if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
+
             streamRef.current = stream;
             if (videoRef.current) {
                 videoRef.current.srcObject = stream;
-                await videoRef.current.play();
+                videoRef.current.play().catch(() => {});
             }
-        } catch {
-            setStatusText("Could not access the camera.");
-            setStep(STEP.ERROR);
-            return;
-        }
 
-        scanLoopRef.current = setInterval(() => {
-            const video = videoRef.current;
-            const canvas = canvasRef.current;
-            if (!video || !canvas || video.readyState < video.HAVE_ENOUGH_DATA) return;
+            scanLoopRef.current = setInterval(() => {
+                const video = videoRef.current;
+                const canvas = canvasRef.current;
+                if (!video || !canvas || video.readyState < video.HAVE_ENOUGH_DATA) return;
 
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext("2d");
-            ctx.drawImage(video, 0, 0);
-            const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const code = jsQR(img.data, img.width, img.height);
-            if (code?.data) {
-                stopCamera();
-                onDetected(code.data);
-            }
-        }, 200);
-    }, [stopCamera]);
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(video, 0, 0);
+                const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(img.data, img.width, img.height);
+                if (code?.data && onDetectedRef.current) {
+                    const cb = onDetectedRef.current;
+                    onDetectedRef.current = null;
+                    stopCamera();
+                    cb(code.data);
+                }
+            }, 200);
+        })();
+
+        return () => { cancelled = true; };
+    }, [step, stopCamera]);
 
     // ── SENDER FLOW (laptop) ──────────────────────────────────────────────────
 
@@ -147,28 +163,25 @@ export default function SyncDialog({ open, onClose, onSyncDone }) {
         }
     }, [onSyncDone]);
 
-    const startScanAnswer = useCallback(async () => {
-        setStep(STEP.SCAN_ANSWER);
-        setStatusText("Point the camera at the mobile's QR code");
-        await startScan(async (answerEncoded) => {
+    const startScanAnswer = useCallback(() => {
+        onDetectedRef.current = async (answerEncoded) => {
             setStep(STEP.CONNECTING);
             setStatusText("Connecting...");
             try {
                 await applyAnswer(pcRef.current, answerEncoded);
-                // channel.onopen fires automatically
             } catch (err) {
                 setStatusText("Connection error: " + err.message);
                 setStep(STEP.ERROR);
             }
-        });
-    }, [startScan]);
+        };
+        setStep(STEP.SCAN_ANSWER);
+        setStatusText("Point the camera at the mobile's QR code");
+    }, []);
 
     // ── RECEIVER FLOW (iPhone) ────────────────────────────────────────────────
 
-    const startReceiver = useCallback(async () => {
-        setStep(STEP.SCAN_OFFER);
-        setStatusText("Point the camera at the laptop's QR code");
-        await startScan(async (offerEncoded) => {
+    const startReceiver = useCallback(() => {
+        onDetectedRef.current = async (offerEncoded) => {
             setStep(STEP.CONNECTING);
             setStatusText("Processing...");
             try {
@@ -212,8 +225,10 @@ export default function SyncDialog({ open, onClose, onSyncDone }) {
                 setStatusText("Error: " + err.message);
                 setStep(STEP.ERROR);
             }
-        });
-    }, [startScan, onSyncDone]);
+        };
+        setStep(STEP.SCAN_OFFER);
+        setStatusText("Point the camera at the laptop's QR code");
+    }, [onSyncDone]);
 
     // ── RENDER ────────────────────────────────────────────────────────────────
 
