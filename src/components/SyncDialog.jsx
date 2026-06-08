@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
-    Button, VStack, HStack, Text, Box, Spinner,
+    Button, VStack, HStack, Text, Box, Spinner, Progress,
     Dialog, CloseButton, Portal,
 } from "@chakra-ui/react";
 import QRCode from "qrcode";
@@ -29,6 +29,7 @@ export default function SyncDialog({ open, onClose, onSyncDone }) {
     const [qrDataUrl, setQrDataUrl] = useState(null);
     const [statusText, setStatusText] = useState("");
     const [syncCount, setSyncCount] = useState(0);
+    const [syncProgress, setSyncProgress] = useState({ sent: 0, total: 0 });
 
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
@@ -151,24 +152,35 @@ export default function SyncDialog({ open, onClose, onSyncDone }) {
                 setStatusText("Waiting for route list from mobile...");
             };
             channel.onmessage = async (e) => {
-                const msg = JSON.parse(e.data);
-                if (msg.type !== "have") return;
+                try {
+                    const msg = JSON.parse(e.data);
+                    if (msg.type !== "have") return;
 
-                const haveSet = new Set(msg.startTimes);
-                const all = await routeStorage.getAllRoutes();
-                const missing = all.filter(r => !haveSet.has(r.summary?.startTime));
+                    const haveSet = new Set(msg.startTimes);
+                    const all = await routeStorage.getAllRoutes();
+                    const missing = all.filter(r => !haveSet.has(r.summary?.startTime));
 
-                await sendData(channel, JSON.stringify({ type: "total", count: missing.length }));
-                setStatusText(`Sending ${missing.length} new route(s)...`);
+                    await sendData(channel, JSON.stringify({ type: "total", count: missing.length }));
+                    setSyncProgress({ sent: 0, total: missing.length });
+                    setStatusText(`Sending ${missing.length} route(s)...`);
 
-                for (const route of missing) {
-                    const { id: _id, ...data } = route;
-                    await sendData(channel, JSON.stringify({ type: "route", data }));
+                    for (let i = 0; i < missing.length; i++) {
+                        const { id: _id, ...data } = missing[i];
+                        await sendData(channel, JSON.stringify({ type: "route", data }));
+                        setSyncProgress({ sent: i + 1, total: missing.length });
+                    }
+                    await sendData(channel, JSON.stringify({ type: "done" }));
+                    setSyncCount(missing.length);
+                    setStep(STEP.DONE);
+                    if (onSyncDone) onSyncDone();
+                } catch (err) {
+                    setStatusText("Transfer error: " + err.message);
+                    setStep(STEP.ERROR);
                 }
-                await sendData(channel, JSON.stringify({ type: "done" }));
-                setSyncCount(missing.length);
-                setStep(STEP.DONE);
-                if (onSyncDone) onSyncDone();
+            };
+            channel.onerror = () => {
+                setStatusText("Connection lost during transfer.");
+                setStep(STEP.ERROR);
             };
 
             const url = await QRCode.toDataURL(encoded, { errorCorrectionLevel: "M", width: 300 });
@@ -223,19 +235,30 @@ export default function SyncDialog({ open, onClose, onSyncDone }) {
                         setStatusText("Sending route list to laptop...");
                     };
                     channel.onmessage = async (ev) => {
-                        const msg = JSON.parse(ev.data);
-                        if (msg.type === "total") {
-                            total = msg.count;
-                            setStatusText(total === 0 ? "No new routes." : `Receiving ${total} route(s)...`);
-                        } else if (msg.type === "route") {
-                            await routeStorage.saveRoute(msg.data, msg.data.routeName || "Ruta");
-                            received++;
-                            setStatusText(`Receiving routes... ${received}/${total}`);
-                        } else if (msg.type === "done") {
-                            setSyncCount(received);
-                            setStep(STEP.DONE);
-                            if (onSyncDone) onSyncDone();
+                        try {
+                            const msg = JSON.parse(ev.data);
+                            if (msg.type === "total") {
+                                total = msg.count;
+                                setSyncProgress({ sent: 0, total });
+                                setStatusText(total === 0 ? "No new routes." : `Receiving ${total} route(s)...`);
+                            } else if (msg.type === "route") {
+                                await routeStorage.saveRoute(msg.data, msg.data.routeName || "Ruta");
+                                received++;
+                                setSyncProgress({ sent: received, total });
+                                setStatusText(`Receiving routes... ${received}/${total}`);
+                            } else if (msg.type === "done") {
+                                setSyncCount(received);
+                                setStep(STEP.DONE);
+                                if (onSyncDone) onSyncDone();
+                            }
+                        } catch (err) {
+                            setStatusText("Transfer error: " + err.message);
+                            setStep(STEP.ERROR);
                         }
+                    };
+                    channel.onerror = () => {
+                        setStatusText("Connection lost during transfer.");
+                        setStep(STEP.ERROR);
                     };
                 };
 
@@ -356,10 +379,33 @@ export default function SyncDialog({ open, onClose, onSyncDone }) {
                 );
 
             case STEP.CONNECTING:
-            case STEP.SYNCING:
                 return (
                     <VStack gap={4} py={4}>
                         <Spinner size="xl" />
+                        <Text fontSize="sm" color="fg.muted" textAlign="center">{statusText}</Text>
+                    </VStack>
+                );
+
+            case STEP.SYNCING:
+                return (
+                    <VStack gap={4} py={4} width="100%">
+                        {syncProgress.total > 0 ? (
+                            <>
+                                <Progress.Root
+                                    width="100%"
+                                    value={syncProgress.total > 0 ? (syncProgress.sent / syncProgress.total) * 100 : 0}
+                                >
+                                    <Progress.Track>
+                                        <Progress.Range />
+                                    </Progress.Track>
+                                </Progress.Root>
+                                <Text fontSize="sm" fontWeight="medium">
+                                    {syncProgress.sent} / {syncProgress.total}
+                                </Text>
+                            </>
+                        ) : (
+                            <Spinner size="xl" />
+                        )}
                         <Text fontSize="sm" color="fg.muted" textAlign="center">{statusText}</Text>
                     </VStack>
                 );
@@ -396,13 +442,20 @@ export default function SyncDialog({ open, onClose, onSyncDone }) {
     };
 
     return (
-        <Dialog.Root open={open} onOpenChange={({ open: o }) => { if (!o) handleClose(); }}>
+        <Dialog.Root
+            open={open}
+            onOpenChange={({ open: o }) => {
+                if (!o && step !== STEP.CONNECTING && step !== STEP.SYNCING) handleClose();
+            }}
+        >
             <Portal>
                 <Dialog.Positioner>
                     <Dialog.Content maxWidth="360px" width="90vw">
                         <Dialog.Header>
                             <Dialog.Title>Sync routes</Dialog.Title>
-                            <CloseButton onClick={handleClose} position="absolute" top={3} right={3} />
+                            {step !== STEP.CONNECTING && step !== STEP.SYNCING && (
+                                <CloseButton onClick={handleClose} position="absolute" top={3} right={3} />
+                            )}
                         </Dialog.Header>
                         <Dialog.Body pb={6}>
                             {renderContent()}
