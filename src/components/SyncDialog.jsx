@@ -9,6 +9,17 @@ import { LuSmartphone, LuLaptop, LuCheck, LuRefreshCw } from "react-icons/lu";
 import routeStorage from "../utils/routeStorage";
 import { createOffer, applyAnswer, createAnswer, sendData } from "../utils/webrtcSync";
 
+// Stable identity for a route, used to dedupe during sync. startTime alone can
+// be missing or (rarely) collide, so pair it with the rounded distance. Both
+// devices run the same deployed version, so the key format only needs to match
+// between the two ends of a single sync.
+function routeKey(summary) {
+    const st = summary?.startTime;
+    const ts = st ? new Date(st).toISOString() : "";
+    const meters = Math.round((summary?.totalDistance || 0) * 1000);
+    return `${ts}|${meters}`;
+}
+
 const STEP = {
     SELECT_ROLE: "select_role",
     // sender
@@ -156,9 +167,9 @@ export default function SyncDialog({ open, onClose, onSyncDone }) {
                     const msg = JSON.parse(e.data);
                     if (msg.type !== "have") return;
 
-                    const haveSet = new Set(msg.startTimes);
+                    const haveSet = new Set(msg.keys);
                     const all = await routeStorage.getAllRoutes();
-                    const missing = all.filter(r => !haveSet.has(r.summary?.startTime));
+                    const missing = all.filter(r => !haveSet.has(routeKey(r.summary)));
 
                     await sendData(channel, JSON.stringify({ type: "total", count: missing.length }));
                     setSyncProgress({ sent: 0, total: missing.length });
@@ -244,8 +255,8 @@ export default function SyncDialog({ open, onClose, onSyncDone }) {
                     channel.onopen = async () => {
                         setStep(STEP.SYNCING);
                         const all = await routeStorage.getAllRoutes();
-                        const startTimes = all.map(r => r.summary?.startTime).filter(Boolean);
-                        channel.send(JSON.stringify({ type: "have", startTimes }));
+                        const keys = all.map(r => routeKey(r.summary));
+                        channel.send(JSON.stringify({ type: "have", keys }));
                         setStatusText("Sending route list to laptop...");
                     };
                     let pendingChunks = null; // { total, parts[] } for large routes
