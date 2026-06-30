@@ -1,0 +1,33 @@
+/* Custom scrollbar that follows Chakra's color tokens (light & dark) */
+
+/* Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--chakra-colors-border-emphasized) transparent;
+}
+
+/* WebKit (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: var(--chakra-colors-border-emphasized);
+    border-radius: 8px;
+    /* keep a small gap so the thumb looks inset */
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--chakra-colors-fg-muted);
+}
+
+::-webkit-scrollbar-corner {
+    background: transparent;
+}

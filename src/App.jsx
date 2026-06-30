@@ -17,6 +17,7 @@ import {
     InputGroup,
     Input,
     Skeleton,
+    Spacer,
 } from "@chakra-ui/react";
 import { Toaster, toaster } from "./components/ui/toaster"
 import { MenuRoot, MenuTrigger, MenuContent, MenuItem, MenuSeparator } from "./components/ui/menu"
@@ -332,7 +333,8 @@ const App = () => {
                             me="-2"
                         />
                     ) : undefined}
-                    flex={1}
+                    flex={{ base: 1, md: 'initial' }}
+                    w={{ base: 'auto', md: '320px' }}
                 >
                     <Input
                         ref={inputRef}
@@ -343,6 +345,8 @@ const App = () => {
                         onChange={(e) => setRouteNameFilter(e.target.value)}
                     />
                 </InputGroup>
+
+                <Spacer display={{ base: 'none', md: 'block' }} />
 
                 {/* Hidden file inputs triggered from menu */}
                 <FileUpload.Root onFileAccept={(e) => handleFitFile(e.files)} accept={[".fit"]} maxFiles={100} display="none">
